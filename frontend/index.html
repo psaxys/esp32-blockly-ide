@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Blockly IDE</title>
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/esptool-js@0.5.0/bundle.js"></script>
+    <style>#blocklyDiv { height: 80vh; width: 100%; }</style>
+</head>
+<body>
+    <button onclick="compileAndFlash()">СКОМПИЛИРОВАТЬ И ПРОШИТЬ</button>
+    <div id="blocklyDiv"></div>
+    <xml id="toolbox" style="display:none">
+        <category name="ESP32" colour="230">
+            <block type="esp32_wifi_connect"></block>
+            <block type="esp32_deep_sleep"></block>
+        </category>
+    </xml>
+    <script src="blocks.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
