@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  compiler:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./arduino_libs:/root/Arduino/libraries
+  
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
