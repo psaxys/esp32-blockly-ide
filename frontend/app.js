@@ -1,63 +1,49 @@
+import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.0/bundle.js';
+
 const workspace = Blockly.inject('blocklyDiv', {
     toolbox: document.getElementById('toolbox'),
     media: 'https://unpkg.com/blockly/media/'
 });
 
-async function compileAndFlash() {
-    const statusEl = document.getElementById('status');
-    statusEl.innerText = "Генерация кода...";
-
-    // 1. Собираем код из блоков
-    const generatedCode = Blockly.JavaScript.workspaceToCode(workspace);
-    const fullCode = `
-#include <Arduino.h>
-void setup() {
-  Serial.begin(115200);
-  ${generatedCode}
+// Функция генерации полного кода
+function generateFullCode() {
+    const code = Blockly.JavaScript.workspaceToCode(workspace);
+    const includes = Object.values(Blockly.JavaScript.definitions_ || {}).join('\n');
+    return `#include <Arduino.h>\n${includes}\n\nvoid setup() {\n  Serial.begin(115200);\n${code}\n}\n\nvoid loop() {}`;
 }
-void loop() {}
-    `;
 
+// Кнопка просмотра кода
+document.getElementById('btnViewCode').onclick = () => {
+    const codePanel = document.getElementById('codeView');
+    document.getElementById('codePre').innerText = generateFullCode();
+    codePanel.style.display = 'block';
+};
+
+// Прошивка
+document.getElementById('btnFlash').onclick = async () => {
+    const status = document.getElementById('status');
     try {
-        // 2. Отправка на бэкенд для компиляции
-        statusEl.innerText = "Компиляция на сервере (может занять 10-20 сек)...";
+        status.innerText = "Компиляция...";
         const response = await fetch('http://localhost:3000/compile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: fullCode })
+            body: JSON.stringify({ code: generateFullCode() })
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error("Ошибка компиляции: " + errorText);
-        }
-
         const blob = await response.blob();
-        statusEl.innerText = "Компиляция успешна! Выберите порт ESP32...";
-
-        // 3. Работа с Web Serial и esptool-js
+        
+        status.innerText = "Подключите ESP32...";
         const port = await navigator.serial.requestPort();
-        const transport = new esptooljs.Transport(port);
-        const esploader = new esptooljs.ESPLoader(transport, 115200);
-
-        statusEl.innerText = "Подключение к ESP32...";
+        const transport = new Transport(port);
+        const esploader = new ESPLoader(transport, 115200);
         await esploader.main_fn();
-
-        statusEl.innerText = "Запись прошивки (Flash)...";
+        
+        status.innerText = "Запись прошивки...";
         await esploader.write_flash({
             fileArray: [{ data: await blob.arrayBuffer(), address: 0x0 }],
-            flash_size: 'keep',
-            reportProgress: (fileIndex, written, total) => {
-                statusEl.innerText = `Прошивка: ${Math.round(written/total*100)}%`;
-            }
+            flash_size: 'keep'
         });
-
-        statusEl.innerText = "Готово! Контроллер перезагружен.";
-        await transport.disconnect();
-
-    } catch (err) {
-        console.error(err);
-        statusEl.innerText = "Ошибка: " + err.message;
-        alert(err.message);
+        status.innerText = "Готово!";
+    } catch (e) {
+        status.innerText = "Ошибка: " + e.message;
     }
-}
+};
