@@ -40,6 +40,62 @@ Blockly.JavaScript['esp32_delay'] = function(block) {
   return `delay(${block.getFieldValue('MS')});\n`;
 };
 
+// --- КАТЕГОРИЯ: ПРЕРЫВАНИЯ ---
+Blockly.Blocks['esp32_interrupt'] = {
+  init: function() {
+    this.appendDummyInput().appendField("Прерывание на Пине #").appendField(new Blockly.FieldNumber(4), "PIN");
+    this.appendDummyInput().appendField("Режим").appendField(new Blockly.FieldDropdown([["CHANGE", "CHANGE"], ["RISING", "RISING"], ["FALLING", "FALLING"]]), "MODE");
+    this.appendStatementInput("DO").appendField("Выполнить");
+    this.setColour(0);
+  }
+};
+Blockly.JavaScript['esp32_interrupt'] = function(block) {
+  var pin = block.getFieldValue('PIN');
+  var mode = block.getFieldValue('MODE');
+  var statements = Blockly.JavaScript.statementToCode(block, 'DO');
+  var funcName = 'handleInterrupt_' + pin;
+  Blockly.JavaScript.definitions_['func_' + funcName] = `void IRAM_ATTR ${funcName}() {\n${statements}\n}`;
+  return `attachInterrupt(digitalPinToInterrupt(${pin}), ${funcName}, ${mode});\n`;
+};
+
+// --- КАТЕГОРИЯ: ДИСПЛЕЙ OLED (SSD1306) ---
+Blockly.Blocks['esp32_oled_init'] = {
+  init: function() {
+    this.appendDummyInput().appendField("Инициализировать OLED I2C 128x64");
+    this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(200);
+  }
+};
+Blockly.JavaScript['esp32_oled_init'] = function(block) {
+  Blockly.JavaScript.definitions_['include_oled'] = '#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\nAdafruit_SSD1306 display(128, 64, &Wire, -1);';
+  return 'if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { Serial.println("OLED failed"); }\ndisplay.clearDisplay();\ndisplay.setTextColor(WHITE);\n';
+};
+
+// --- КАТЕГОРИЯ: МЕСТО ХРАНЕНИЯ (LittleFS/SPIFFS) ---
+Blockly.Blocks['esp32_spiffs_write'] = {
+  init: function() {
+    this.appendValueInput("CONTENT").setCheck("String").appendField("Записать в файл");
+    this.appendDummyInput().appendField("Путь:").appendField(new Blockly.FieldTextInput("/data.txt"), "PATH");
+    this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(230);
+  }
+};
+Blockly.JavaScript['esp32_spiffs_write'] = function(block) {
+  var content = Blockly.JavaScript.valueToCode(block, 'CONTENT', Blockly.JavaScript.ORDER_ATOMIC) || '""';
+  var path = block.getFieldValue('PATH');
+  Blockly.JavaScript.definitions_['include_fs'] = '#include "FS.h"\n#include "LittleFS.h"';
+  return `File file = LittleFS.open("${path}", FILE_WRITE);\nif(file) { file.print(${content}); file.close(); }\n`;
+};
+
+// --- КАТЕГОРИЯ: МОНИТОР ПОРТА ---
+Blockly.Blocks['esp32_serial_available'] = {
+  init: function() {
+    this.appendDummyInput().appendField("Данные в Serial доступны?");
+    this.setOutput(true, "Boolean"); this.setColour(160);
+  }
+};
+Blockly.JavaScript['esp32_serial_available'] = function(block) {
+  return ['Serial.available() > 0', Blockly.JavaScript.ORDER_ATOMIC];
+};
+
 // --- БЛОК: Аналоговое чтение (Read ADC) ---
 Blockly.Blocks['esp32_analog_read'] = {
   init: function() {
