@@ -1,106 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <title>ESP32 Visual Studio</title>
+    <meta charset="UTF-8">
+    <title>ESP32 Ultimate IDE</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    <script src="https://unpkg.com/esptool-js@0.5.0/bundle.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+    
     <style>
-        body { font-family: sans-serif; }
-        #blocklyDiv { height: 70vh; width: 100%; border: 1px solid #ccc; }
-        #console { background: #333; color: #eee; padding: 10px; height: 100px; overflow-y: auto; margin-top: 10px; }
-        .controls { margin-bottom: 10px; }
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; }
+        .panel { background: #2c3e50; color: white; padding: 10px; display: flex; gap: 10px; align-items: center; }
+        #blocklyDiv { flex-grow: 1; width: 100%; }
+        button { padding: 8px 15px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-flash { background: #27ae60; color: white; }
+        .btn-code { background: #34495e; color: white; border: 1px solid #7f8c8d; }
+        #codeView { display: none; position: fixed; top: 50px; right: 10px; width: 40%; height: 80vh; 
+                    background: #1e1e1e; color: #d4d4d4; padding: 15px; overflow: auto; z-index: 100; 
+                    border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-family: monospace; }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <button onclick="compileAndFlash()" style="padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer;">
-            ⚡ ЗАГРУЗИТЬ В ESP32
-        </button>
-        <span id="status" style="margin-left: 20px; font-weight: bold;">Готов к работе</span>
-    </div>
 
-    <div id="blocklyDiv"></div>
+<div class="panel">
+    <button class="btn-flash" id="btnFlash">⚡ ПРОШИТЬ</button>
+    <button class="btn-code" id="btnViewCode">📄 КОД</button>
+    <div id="status">Статус: Готов</div>
+</div>
 
-   <xml id="toolbox" style="display:none">
-  <category name="Логика" colour="210">
-    <block type="controls_if"></block>
-    <block type="logic_compare"></block>
-    <block type="logic_operation"></block>
-    <block type="logic_negate"></block>
-    <block type="logic_boolean"></block>
-    <block type="logic_null"></block>
-  </category>
-  <category name="Циклы" colour="120">
-    <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>
-    <block type="controls_whileUntil"></block>
-    <block type="controls_for"></block>
-    <block type="controls_forEach"></block>
-    <block type="controls_flow_statements"></block>
-  </category>
-  <category name="Математика" colour="230">
-    <block type="math_number"></block>
-    <block type="math_arithmetic"></block>
-    <block type="math_single"></block>
-    <block type="math_trig"></block>
-    <block type="math_random_int"></block>
-  </category>
-  <category name="Текст" colour="160">
-    <block type="text"></block>
-    <block type="text_join"></block>
-    <block type="text_append"></block>
-    <block type="text_length"></block>
-  </category>
-  <category name="Массивы" colour="260">
-    <block type="lists_create_with"></block>
-    <block type="lists_repeat"></block>
-    <block type="lists_length"></block>
-    <block type="lists_isEmpty"></block>
-  </category>
-  <category name="Переменные" colour="330" custom="VARIABLE"></category>
-  <category name="Функции" colour="290" custom="PROCEDURE"></category>
+<div id="blocklyDiv"></div>
+<div id="codeView"><pre id="codePre"></pre><button onclick="document.getElementById('codeView').style.display='none'">Закрыть</button></div>
 
-  <sep></sep>
-
-  <category name="Входы / Выходы" colour="20">
-    <block type="esp32_digital_write"></block>
-    <block type="esp32_digital_read"></block>
-    <block type="esp32_pwm_setup"></block>
-    <block type="esp32_pwm_write"></block>
-    <block type="esp32_analog_read"></block>
-  </category>
-  <category name="Прерывание" colour="0">
-    <block type="esp32_interrupt"></block>
-  </category>
-  <category name="Время" colour="65">
-    <block type="esp32_delay"></block>
-    <block type="esp32_millis"></block>
-  </category>
-  <category name="Монитор порта" colour="160">
-    <block type="esp32_serial_print"></block>
-    <block type="esp32_serial_available"></block>
-  </category>
-  <category name="Дисплеи (OLED/LCD)" colour="200">
-    <block type="esp32_oled_init"></block>
-    <block type="esp32_oled_print"></block>
-    <block type="esp32_lcd_i2c_init"></block>
-  </category>
-  <category name="Сенсоры" colour="45">
-    <block type="esp32_dht_read"></block>
-    <block type="esp32_hall_read"></block>
-    <block type="esp32_touch_read"></block>
-  </category>
-  <category name="Моторы" colour="190">
-    <block type="esp32_servo_move"></block>
-    <block type="esp32_stepper_step"></block>
-  </category>
-  <category name="Место хранения" colour="230">
-    <block type="esp32_spiffs_write"></block>
-    <block type="esp32_spiffs_read"></block>
-  </category>
+<xml id="toolbox" style="display:none">
+    <category name="Логика" colour="210">
+        <block type="controls_if"></block>
+        <block type="logic_compare"></block>
+        <block type="logic_operation"></block>
+        <block type="logic_boolean"></block>
+    </category>
+    <category name="Циклы" colour="120">
+        <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>
+        <block type="controls_whileUntil"></block>
+    </category>
+    <category name="Математика" colour="230">
+        <block type="math_number"></block>
+        <block type="math_arithmetic"></block>
+    </category>
+    <category name="Текст" colour="160">
+        <block type="text"></block>
+        <block type="esp32_serial_print"></block>
+    </category>
+    <category name="Время" colour="65">
+        <block type="esp32_delay"></block>
+        <block type="esp32_millis"></block>
+    </category>
+    <sep></sep>
+    <category name="Входы / Выходы" colour="20">
+        <block type="esp32_digital_write"></block>
+        <block type="esp32_digital_read"></block>
+        <block type="esp32_analog_read"></block>
+        <block type="esp32_pwm_write"></block>
+    </category>
+    <category name="Прерывания" colour="0">
+        <block type="esp32_interrupt"></block>
+    </category>
+    <category name="Сенсоры" colour="45">
+        <block type="esp32_touch_read"></block>
+        <block type="esp32_hall_read"></block>
+        <block type="esp32_dht_read"></block>
+    </category>
+    <category name="Дисплеи" colour="200">
+        <block type="esp32_oled_init"></block>
+        <block type="esp32_oled_print"></block>
+    </category>
+    <category name="Модули связи" colour="230">
+        <block type="esp32_wifi_connect"></block>
+        <block type="esp32_http_get"></block>
+    </category>
+    <sep></sep>
+    <category name="Переменные" colour="330" custom="VARIABLE"></category>
+    <category name="Массивы" colour="260">
+        <block type="lists_create_with"></block>
+    </category>
+    <category name="Функции" colour="290" custom="PROCEDURE"></category>
 </xml>
 
-    <script src="blocks.js"></script>
-    <script src="app.js"></script>
+<script src="blocks.js"></script>
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
