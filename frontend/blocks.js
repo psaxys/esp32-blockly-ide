@@ -1,241 +1,270 @@
-// Инициализация генератора
+// Проверка и инициализация генератора JavaScript
 if (!Blockly.JavaScript) {
     Blockly.JavaScript = new Blockly.Generator('JavaScript');
 }
-Blockly.JavaScript.ORDER_ATOMIC = 0;
 
-// Исправление для переменных (поддержка v12+)
-Blockly.JavaScript.init = function(workspace) {
-    Blockly.JavaScript.definitions_ = Object.create(null);
-    Blockly.JavaScript.variableDB_ = new Blockly.Names(Blockly.JavaScript.NAME_TYPE);
+const generator = Blockly.JavaScript;
+generator.ORDER_ATOMIC = 0;
+
+// === ИСПРАВЛЕНИЕ: Инициализация переменных (для версий Blockly v12+) ===
+generator.init = function(workspace) {
+    // Создаем объект для хранения инклудов и глобальных переменных
+    generator.definitions_ = Object.create(null);
+    // Создаем базу данных имен переменных
+    generator.variableDB_ = new Blockly.Names(generator.NAME_TYPE);
+    
     var defvars = [];
+    // Используем современный метод getVariableMap() вместо устаревшего getAllVariables()
     var variables = workspace.getVariableMap().getAllVariables();
-    for (var i = 0; i < variables.length; i++) {
-        defvars.push('float ' + Blockly.JavaScript.variableDB_.getName(variables[i].name, Blockly.VARIABLE_CATEGORY_NAME) + ' = 0;');
+    
+    if (variables.length > 0) {
+        for (var i = 0; i < variables.length; i++) {
+            // Объявляем все переменные как float по умолчанию для простоты
+            defvars.push('float ' + generator.variableDB_.getName(variables[i].name, Blockly.VARIABLE_CATEGORY_NAME) + ' = 0;');
+        }
+        generator.definitions_['variables'] = defvars.join('\n');
     }
-    Blockly.JavaScript.definitions_['variables'] = defvars.join('\n');
 };
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-const addDef = (key, text) => { Blockly.JavaScript.definitions_[key] = text; };
+// Вспомогательная функция для добавления определений
+function addDefinition(key, code) {
+    generator.definitions_[key] = code;
+}
 
-// --- КАТЕГОРИЯ: ВРЕМЯ ---
+// ==========================================
+// КАТЕГОРИЯ: ВРЕМЯ
+// ==========================================
 Blockly.Blocks['esp32_delay'] = {
     init: function() {
-        this.appendDummyInput().appendField("Пауза").appendField(new Blockly.FieldNumber(1000), "MS").appendField("мс");
+        this.appendDummyInput().appendField("Ждать (Delay)").appendField(new Blockly.FieldNumber(1000), "MS").appendField("мс");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(65);
     }
 };
-Blockly.JavaScript['esp32_delay'] = (block) => `delay(${block.getFieldValue('MS')});\n`;
+generator['esp32_delay'] = function(block) {
+    return `delay(${block.getFieldValue('MS')});\n`;
+};
 
 Blockly.Blocks['esp32_millis'] = {
     init: function() {
-        this.appendDummyInput().appendField("мс с начала работы");
+        this.appendDummyInput().appendField("Время с старта (мс)");
         this.setOutput(true, "Number"); this.setColour(65);
     }
 };
-Blockly.JavaScript['esp32_millis'] = () => ['millis()', Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_millis'] = function(block) {
+    return [`millis()`, generator.ORDER_ATOMIC];
+};
 
-// --- КАТЕГОРИЯ: ВХОДЫ / ВЫХОДЫ ---
+// ==========================================
+// КАТЕГОРИЯ: ВХОДЫ / ВЫХОДЫ
+// ==========================================
 Blockly.Blocks['esp32_digital_write'] = {
     init: function() {
-        this.appendDummyInput().appendField("Пин #").appendField(new Blockly.FieldNumber(2), "PIN")
-            .appendField("в статус").appendField(new Blockly.FieldDropdown([["ВКЛ","HIGH"],["ВЫКЛ","LOW"]]), "STATE");
+        this.appendDummyInput().appendField("Цифровой Писать Пин").appendField(new Blockly.FieldNumber(2), "PIN");
+        this.appendDummyInput().appendField("Уровень").appendField(new Blockly.FieldDropdown([["ВЫСОКИЙ (3.3V)","HIGH"],["НИЗКИЙ (GND)","LOW"]]), "VAL");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
     }
 };
-Blockly.JavaScript['esp32_digital_write'] = (block) => {
+generator['esp32_digital_write'] = function(block) {
     const pin = block.getFieldValue('PIN');
-    return `pinMode(${pin}, OUTPUT);\ndigitalWrite(${pin}, ${block.getFieldValue('STATE')});\n`;
+    return `pinMode(${pin}, OUTPUT);\ndigitalWrite(${pin}, ${block.getFieldValue('VAL')});\n`;
 };
 
 Blockly.Blocks['esp32_digital_read'] = {
     init: function() {
-        this.appendDummyInput().appendField("Считать Пин #").appendField(new Blockly.FieldNumber(4), "PIN");
+        this.appendDummyInput().appendField("Цифровой Читать Пин").appendField(new Blockly.FieldNumber(4), "PIN");
         this.setOutput(true, "Boolean"); this.setColour(20);
     }
 };
-Blockly.JavaScript['esp32_digital_read'] = (block) => [`digitalRead(${block.getFieldValue('PIN')})`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_digital_read'] = function(block) {
+    return [`digitalRead(${block.getFieldValue('PIN')})`, generator.ORDER_ATOMIC];
+};
 
 Blockly.Blocks['esp32_analog_read'] = {
     init: function() {
-        this.appendDummyInput().appendField("Аналог Пин #").appendField(new Blockly.FieldNumber(34), "PIN");
+        this.appendDummyInput().appendField("Аналоговый Читать Пин").appendField(new Blockly.FieldNumber(34), "PIN");
         this.setOutput(true, "Number"); this.setColour(20);
     }
 };
-Blockly.JavaScript['esp32_analog_read'] = (block) => [`analogRead(${block.getFieldValue('PIN')})`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_analog_read'] = function(block) {
+    return [`analogRead(${block.getFieldValue('PIN')})`, generator.ORDER_ATOMIC];
+};
 
 Blockly.Blocks['esp32_pwm_write'] = {
     init: function() {
-        this.appendDummyInput().appendField("ШИМ Пин #").appendField(new Blockly.FieldNumber(2), "PIN");
-        this.appendValueInput("VAL").setCheck("Number").appendField("Яркость");
+        this.appendDummyInput().appendField("ШИМ (PWM) Пин").appendField(new Blockly.FieldNumber(2), "PIN");
+        this.appendValueInput("VAL").setCheck("Number").appendField("Значение (0-255)");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(20);
     }
 };
-Blockly.JavaScript['esp32_pwm_write'] = (block) => {
-    const val = Blockly.JavaScript.valueToCode(block, 'VAL', Blockly.JavaScript.ORDER_ATOMIC) || '0';
+generator['esp32_pwm_write'] = function(block) {
     const pin = block.getFieldValue('PIN');
-    return `ledcAttachPin(${pin}, 0);\nledcSetup(0, 5000, 8);\nledcWrite(0, ${val});\n`;
+    const val = generator.valueToCode(block, 'VAL', generator.ORDER_ATOMIC) || '0';
+    // Простая реализация через analogWrite (поддерживается в новых ядрах ESP32 Arduino)
+    // Если нужно старое ядро, тут нужен ledcSetup/ledcAttachPin
+    return `analogWrite(${pin}, ${val});\n`;
 };
 
-// --- ПРЕРЫВАНИЕ ---
+// ==========================================
+// КАТЕГОРИЯ: ПРЕРЫВАНИЯ
+// ==========================================
 Blockly.Blocks['esp32_interrupt'] = {
     init: function() {
-        this.appendDummyInput().appendField("Прерывание на пине").appendField(new Blockly.FieldNumber(4), "PIN")
-            .appendField("режим").appendField(new Blockly.FieldDropdown([["RISING","RISING"],["FALLING","FALLING"],["CHANGE","CHANGE"]]), "MODE");
-        this.appendStatementInput("DO").appendField("Делать");
+        this.appendDummyInput().appendField("Прерывание Пин").appendField(new Blockly.FieldNumber(4), "PIN");
+        this.appendDummyInput().appendField("Триггер").appendField(new Blockly.FieldDropdown([["CHANGE","CHANGE"],["RISING","RISING"],["FALLING","FALLING"]]), "MODE");
+        this.appendStatementInput("DO").appendField("Выполнить");
         this.setColour(0);
     }
 };
-Blockly.JavaScript['esp32_interrupt'] = (block) => {
+generator['esp32_interrupt'] = function(block) {
     const pin = block.getFieldValue('PIN');
-    const branch = Blockly.JavaScript.statementToCode(block, 'DO');
-    addDef(`isr_${pin}`, `void IRAM_ATTR onInterrupt_${pin}() {\n${branch}\n}`);
-    return `attachInterrupt(digitalPinToInterrupt(${pin}), onInterrupt_${pin}, ${block.getFieldValue('MODE')});\n`;
+    const mode = block.getFieldValue('MODE');
+    const branch = generator.statementToCode(block, 'DO');
+    const funcName = `isr_gpio_${pin}`;
+    
+    // Генерируем отдельную функцию ISR
+    addDefinition(funcName, `void IRAM_ATTR ${funcName}() {\n${branch}\n}`);
+    
+    return `attachInterrupt(digitalPinToInterrupt(${pin}), ${funcName}, ${mode});\n`;
 };
 
-// --- МОНИТОР ПОРТА ---
-Blockly.Blocks['esp32_serial_print'] = {
-    init: function() {
-        this.appendValueInput("TXT").appendField("Serial: Печать");
-        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
-    }
-};
-Blockly.JavaScript['esp32_serial_print'] = (block) => {
-    const txt = Blockly.JavaScript.valueToCode(block, 'TXT', Blockly.JavaScript.ORDER_ATOMIC) || '""';
-    return `Serial.println(${txt});\n`;
-};
-
-Blockly.Blocks['esp32_serial_available'] = {
-    init: function() {
-        this.appendDummyInput().appendField("Есть данные в Serial?");
-        this.setOutput(true, "Boolean"); this.setColour(160);
-    }
-};
-Blockly.JavaScript['esp32_serial_available'] = () => ["Serial.available() > 0", Blockly.JavaScript.ORDER_ATOMIC];
-
-// --- СЕНСОРЫ ---
+// ==========================================
+// КАТЕГОРИЯ: СЕНСОРЫ
+// ==========================================
 Blockly.Blocks['esp32_dht_read'] = {
     init: function() {
-        this.appendDummyInput().appendField("DHT Пин #").appendField(new Blockly.FieldNumber(4), "PIN")
-            .appendField("тип").appendField(new Blockly.FieldDropdown([["Температура","T"],["Влажность","H"]]), "TYPE");
+        this.appendDummyInput().appendField("DHT11 Пин").appendField(new Blockly.FieldNumber(4), "PIN");
+        this.appendDummyInput().appendField("Данные").appendField(new Blockly.FieldDropdown([["Температура","readTemperature()"],["Влажность","readHumidity()"]]), "TYPE");
         this.setOutput(true, "Number"); this.setColour(45);
     }
 };
-Blockly.JavaScript['esp32_dht_read'] = (block) => {
-    addDef('inc_dht', '#include <DHT.h>\nDHT dht(4, DHT11);');
-    const func = block.getFieldValue('TYPE') === 'T' ? 'readTemperature()' : 'readHumidity()';
-    return [`dht.${func}`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_dht_read'] = function(block) {
+    const pin = block.getFieldValue('PIN');
+    // Добавляем объект DHT глобально
+    addDefinition(`dht_${pin}`, `#include <DHT.h>\nDHT dht_${pin}(${pin}, DHT11);`);
+    // Инициализация в setup не обязательна для DHT в простых примерах, но лучше добавить
+    // Но так как generator.definitions_ это просто строки, мы полагаемся на конструктор.
+    return [`dht_${pin}.${block.getFieldValue('TYPE')}`, generator.ORDER_ATOMIC];
 };
 
 Blockly.Blocks['esp32_touch_read'] = {
     init: function() {
-        this.appendDummyInput().appendField("Сенсор Пин #").appendField(new Blockly.FieldNumber(15), "PIN");
+        this.appendDummyInput().appendField("Touch Сенсор Пин").appendField(new Blockly.FieldNumber(15), "PIN");
         this.setOutput(true, "Number"); this.setColour(45);
     }
 };
-Blockly.JavaScript['esp32_touch_read'] = (block) => [`touchRead(${block.getFieldValue('PIN')})`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_touch_read'] = function(block) {
+    return [`touchRead(${block.getFieldValue('PIN')})`, generator.ORDER_ATOMIC];
+};
 
 Blockly.Blocks['esp32_hall_read'] = {
     init: function() {
-        this.appendDummyInput().appendField("Магнитное поле (Hall)");
+        this.appendDummyInput().appendField("Датчик Холла (Internal)");
         this.setOutput(true, "Number"); this.setColour(45);
     }
 };
-Blockly.JavaScript['esp32_hall_read'] = () => [`hallRead()`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_hall_read'] = function(block) {
+    return [`hallRead()`, generator.ORDER_ATOMIC];
+};
 
-// --- МОТОРЫ ---
+// ==========================================
+// КАТЕГОРИЯ: МОТОРЫ
+// ==========================================
 Blockly.Blocks['esp32_servo_move'] = {
     init: function() {
-        this.appendDummyInput().appendField("Серво Пин #").appendField(new Blockly.FieldNumber(18), "PIN");
+        this.appendDummyInput().appendField("Серво Пин").appendField(new Blockly.FieldNumber(18), "PIN");
         this.appendValueInput("DEG").setCheck("Number").appendField("Угол (0-180)");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(190);
     }
 };
-Blockly.JavaScript['esp32_servo_move'] = (block) => {
-    addDef('inc_servo', '#include <ESP32Servo.h>\nServo myservo;');
-    const deg = Blockly.JavaScript.valueToCode(block, 'DEG', Blockly.JavaScript.ORDER_ATOMIC) || '90';
-    return `myservo.attach(${block.getFieldValue('PIN')});\nmyservo.write(${deg});\n`;
+generator['esp32_servo_move'] = function(block) {
+    const pin = block.getFieldValue('PIN');
+    const deg = generator.valueToCode(block, 'DEG', generator.ORDER_ATOMIC) || '0';
+    addDefinition('include_servo', '#include <ESP32Servo.h>');
+    addDefinition(`servo_${pin}`, `Servo servo_${pin};`);
+    
+    // В loop мы каждый раз делаем attach, это не идеально, но для блочного кода безопасно
+    return `if(!servo_${pin}.attached()) servo_${pin}.attach(${pin});\nservo_${pin}.write(${deg});\n`;
 };
 
-// --- ДИСПЛЕИ ---
+// ==========================================
+// КАТЕГОРИЯ: ДИСПЛЕИ
+// ==========================================
 Blockly.Blocks['esp32_oled_init'] = {
     init: function() {
-        this.appendDummyInput().appendField("Инициализировать OLED (I2C)");
+        this.appendDummyInput().appendField("Иниц. OLED SSD1306 (I2C)");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(200);
     }
 };
-Blockly.JavaScript['esp32_oled_init'] = () => {
-    addDef('inc_oled', '#include <Adafruit_SSD1306.h>\nAdafruit_SSD1306 display(128, 64, &Wire, -1);');
-    return `display.begin(SSD1306_SWITCHCAPVCC, 0x3C);\ndisplay.clearDisplay();\n`;
+generator['esp32_oled_init'] = function(block) {
+    addDefinition('include_oled', '#include <Adafruit_SSD1306.h>\n#include <Wire.h>');
+    addDefinition('obj_oled', 'Adafruit_SSD1306 display(128, 64, &Wire, -1);');
+    return `display.begin(SSD1306_SWITCHCAPVCC, 0x3C);\ndisplay.clearDisplay();\ndisplay.display();\n`;
 };
 
 Blockly.Blocks['esp32_oled_print'] = {
     init: function() {
-        this.appendValueInput("TXT").appendField("OLED: Печать");
+        this.appendValueInput("TXT").appendField("OLED Печать");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(200);
     }
 };
-Blockly.JavaScript['esp32_oled_print'] = (block) => {
-    const txt = Blockly.JavaScript.valueToCode(block, 'TXT', Blockly.JavaScript.ORDER_ATOMIC) || '""';
-    return `display.setTextSize(1);\ndisplay.setCursor(0,0);\ndisplay.print(${txt});\ndisplay.display();\n`;
+generator['esp32_oled_print'] = function(block) {
+    const txt = generator.valueToCode(block, 'TXT', generator.ORDER_ATOMIC) || '""';
+    return `display.setTextSize(1);\ndisplay.setTextColor(WHITE);\ndisplay.setCursor(0,0);\ndisplay.print(${txt});\ndisplay.display();\n`;
 };
 
 Blockly.Blocks['esp32_lcd_init'] = {
     init: function() {
-        this.appendDummyInput().appendField("Инициализировать LCD 16x2 (I2C)");
+        this.appendDummyInput().appendField("Иниц. LCD 16x2 (I2C) Адрес 0x27");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(200);
     }
 };
-Blockly.JavaScript['esp32_lcd_init'] = () => {
-    addDef('inc_lcd', '#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);');
+generator['esp32_lcd_init'] = function(block) {
+    addDefinition('include_lcd', '#include <LiquidCrystal_I2C.h>');
+    addDefinition('obj_lcd', 'LiquidCrystal_I2C lcd(0x27, 16, 2);');
     return `lcd.init();\nlcd.backlight();\n`;
 };
 
-// --- ХРАНИЛИЩЕ ---
-Blockly.Blocks['esp32_spiffs_write'] = {
+// ==========================================
+// КАТЕГОРИЯ: СВЯЗЬ
+// ==========================================
+Blockly.Blocks['esp32_serial_print'] = {
     init: function() {
-        this.appendDummyInput().appendField("Записать в файл").appendField(new Blockly.FieldTextInput("/log.txt"), "FN");
-        this.appendValueInput("VAL").appendField("Данные");
-        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
+        this.appendValueInput("TXT").appendField("Serial Print");
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(160);
     }
 };
-Blockly.JavaScript['esp32_spiffs_write'] = (block) => {
-    addDef('inc_fs', '#include "LittleFS.h"');
-    const val = Blockly.JavaScript.valueToCode(block, 'VAL', Blockly.JavaScript.ORDER_ATOMIC) || '""';
-    return `File f = LittleFS.open("${block.getFieldValue('FN')}", "a");\nif(f) { f.println(${val}); f.close(); }\n`;
+generator['esp32_serial_print'] = function(block) {
+    const txt = generator.valueToCode(block, 'TXT', generator.ORDER_ATOMIC) || '""';
+    return `Serial.println(${txt});\n`;
 };
 
-Blockly.Blocks['esp32_spiffs_read'] = {
-    init: function() {
-        this.appendDummyInput().appendField("Считать файл").appendField(new Blockly.FieldTextInput("/log.txt"), "FN");
-        this.setOutput(true, "String"); this.setColour(260);
-    }
-};
-Blockly.JavaScript['esp32_spiffs_read'] = (block) => {
-    return [`LittleFS.open("${block.getFieldValue('FN')}", "r").readString()`, Blockly.JavaScript.ORDER_ATOMIC];
-};
-
-// --- СВЯЗЬ ---
 Blockly.Blocks['esp32_wifi_connect'] = {
     init: function() {
-        this.appendDummyInput().appendField("WiFi SSID").appendField(new Blockly.FieldTextInput("SSID"), "SSID");
-        this.appendDummyInput().appendField("Пароль").appendField(new Blockly.FieldTextInput("PASS"), "PASS");
+        this.appendDummyInput().appendField("Подкл. к WiFi SSID").appendField(new Blockly.FieldTextInput("MyWiFi"), "SSID");
+        this.appendDummyInput().appendField("Пароль").appendField(new Blockly.FieldTextInput("12345678"), "PASS");
         this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(230);
     }
 };
-Blockly.JavaScript['esp32_wifi_connect'] = (block) => {
-    addDef('inc_wifi', '#include <WiFi.h>');
-    return `WiFi.begin("${block.getFieldValue('SSID')}", "${block.getFieldValue('PASS')}");\nwhile(WiFi.status() != WL_CONNECTED) delay(500);\n`;
+generator['esp32_wifi_connect'] = function(block) {
+    const ssid = block.getFieldValue('SSID');
+    const pass = block.getFieldValue('PASS');
+    addDefinition('include_wifi', '#include <WiFi.h>');
+    return `WiFi.begin("${ssid}", "${pass}");\nwhile(WiFi.status() != WL_CONNECTED) { delay(500); }\n`;
 };
 
-Blockly.Blocks['esp32_http_get'] = {
+// ==========================================
+// КАТЕГОРИЯ: ХРАНИЛИЩЕ
+// ==========================================
+Blockly.Blocks['esp32_spiffs_write'] = {
     init: function() {
-        this.appendDummyInput().appendField("HTTP GET запрос").appendField(new Blockly.FieldTextInput("http://api.com"), "URL");
-        this.setOutput(true, "String"); this.setColour(230);
+        this.appendDummyInput().appendField("Записать в файл").appendField(new Blockly.FieldTextInput("/log.txt"), "PATH");
+        this.appendValueInput("DATA").appendField("Данные");
+        this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260);
     }
 };
-Blockly.JavaScript['esp32_http_get'] = (block) => {
-    addDef('inc_http', '#include <HTTPClient.h>');
-    return [`[](){ HTTPClient h; h.begin("${block.getFieldValue('URL')}"); h.GET(); return h.getString(); }()`, Blockly.JavaScript.ORDER_ATOMIC];
+generator['esp32_spiffs_write'] = function(block) {
+    addDefinition('include_fs', '#include "LittleFS.h"');
+    const path = block.getFieldValue('PATH');
+    const data = generator.valueToCode(block, 'DATA', generator.ORDER_ATOMIC) || '""';
+    return `File f = LittleFS.open("${path}", "a");\nif(f){ f.println(${data}); f.close(); }\n`;
 };
