@@ -22,24 +22,83 @@
 
     <div id="blocklyDiv"></div>
 
-    <xml id="toolbox" style="display:none">
-        <category name="Пин (Ввод/Вывод)" colour="160">
-        <block type="esp32_digital_write"></block>
-        <block type="esp32_analog_read"></block>
-        <block type="esp32_delay"></block>
-    </category>
-    <category name="Логика/Математика" colour="210">
-        <block type="controls_if"></block>
-        <block type="logic_compare"></block>
-        <block type="math_number"></block>
-    </category>
-    <category name="Сетевые функции" colour="230">
-        <block type="esp32_wifi_connect"></block>
-    </category>
-    <category name="Система" colour="290">
-        <block type="esp32_deep_sleep"></block>
-    </category>
-    </xml>
+   <xml id="toolbox" style="display:none">
+  <category name="Логика" colour="210">
+    <block type="controls_if"></block>
+    <block type="logic_compare"></block>
+    <block type="logic_operation"></block>
+    <block type="logic_negate"></block>
+    <block type="logic_boolean"></block>
+    <block type="logic_null"></block>
+  </category>
+  <category name="Циклы" colour="120">
+    <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>
+    <block type="controls_whileUntil"></block>
+    <block type="controls_for"></block>
+    <block type="controls_forEach"></block>
+    <block type="controls_flow_statements"></block>
+  </category>
+  <category name="Математика" colour="230">
+    <block type="math_number"></block>
+    <block type="math_arithmetic"></block>
+    <block type="math_single"></block>
+    <block type="math_trig"></block>
+    <block type="math_random_int"></block>
+  </category>
+  <category name="Текст" colour="160">
+    <block type="text"></block>
+    <block type="text_join"></block>
+    <block type="text_append"></block>
+    <block type="text_length"></block>
+  </category>
+  <category name="Массивы" colour="260">
+    <block type="lists_create_with"></block>
+    <block type="lists_repeat"></block>
+    <block type="lists_length"></block>
+    <block type="lists_isEmpty"></block>
+  </category>
+  <category name="Переменные" colour="330" custom="VARIABLE"></category>
+  <category name="Функции" colour="290" custom="PROCEDURE"></category>
+
+  <sep></sep>
+
+  <category name="Входы / Выходы" colour="20">
+    <block type="esp32_digital_write"></block>
+    <block type="esp32_digital_read"></block>
+    <block type="esp32_pwm_setup"></block>
+    <block type="esp32_pwm_write"></block>
+    <block type="esp32_analog_read"></block>
+  </category>
+  <category name="Прерывание" colour="0">
+    <block type="esp32_interrupt"></block>
+  </category>
+  <category name="Время" colour="65">
+    <block type="esp32_delay"></block>
+    <block type="esp32_millis"></block>
+  </category>
+  <category name="Монитор порта" colour="160">
+    <block type="esp32_serial_print"></block>
+    <block type="esp32_serial_available"></block>
+  </category>
+  <category name="Дисплеи (OLED/LCD)" colour="200">
+    <block type="esp32_oled_init"></block>
+    <block type="esp32_oled_print"></block>
+    <block type="esp32_lcd_i2c_init"></block>
+  </category>
+  <category name="Сенсоры" colour="45">
+    <block type="esp32_dht_read"></block>
+    <block type="esp32_hall_read"></block>
+    <block type="esp32_touch_read"></block>
+  </category>
+  <category name="Моторы" colour="190">
+    <block type="esp32_servo_move"></block>
+    <block type="esp32_stepper_step"></block>
+  </category>
+  <category name="Место хранения" colour="230">
+    <block type="esp32_spiffs_write"></block>
+    <block type="esp32_spiffs_read"></block>
+  </category>
+</xml>
 
     <script src="blocks.js"></script>
     <script src="app.js"></script>
