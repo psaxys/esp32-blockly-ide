@@ -1,42 +1,69 @@
+// app.js
 import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.0/bundle.js';
 
 const workspace = Blockly.inject('blocklyDiv', {
     toolbox: document.getElementById('toolbox'),
     media: 'https://unpkg.com/blockly/media/',
-    scrollbars: true
+    scrollbars: true,
+    zoom: { controls: true, wheel: true }
 });
 
 function generateFullCPP() {
-    // Важно: инициализируем генератор для текущего workspace
+    // 1. Инициализация (сбрасывает definitions_ и настраивает переменные)
     javascriptGenerator.init(workspace);
     
-    // Генерируем код всех блоков
+    // 2. Генерация (заполняет definitions_ и превращает блоки в код)
+    // Мы вызываем это, чтобы сработали все функции forBlock
     javascriptGenerator.workspaceToCode(workspace);
     
-    // Находим блок структуры
+    // 3. Сбор данных из специального блока структуры
     const mainBlock = workspace.getAllBlocks(false).find(b => b.type === 'esp32_main_structure');
     
-    const setupPart = mainBlock ? mainBlock.generatedSetup : "";
-    const loopPart = mainBlock ? mainBlock.generatedLoop : "";
+    if (!mainBlock) {
+        alert("Пожалуйста, добавьте блок 'ПРОГРАММА ESP32' на поле!");
+        return null;
+    }
+
+    const setupPart = mainBlock.userData ? mainBlock.userData.setup : "";
+    const loopPart = mainBlock.userData ? mainBlock.userData.loop : "";
+    
+    // Собираем все инклюды и переменные
     const defs = Object.values(javascriptGenerator.definitions_ || {}).join('\n');
     
-    return `#include <Arduino.h>\n\n${defs}\n\nvoid setup() {\n  Serial.begin(115200);\n${setupPart}\n}\n\nvoid loop() {\n${loopPart}\n  delay(1);\n}`;
+    return `
+#include <Arduino.h>
+
+${defs}
+
+void setup() {
+  Serial.begin(115200);
+  ${setupPart}
 }
 
-// Кнопка просмотра кода
+void loop() {
+  ${loopPart}
+  delay(1); 
+}
+`;
+}
+
+// Показ кода
 document.getElementById('btnViewCode').onclick = () => {
-    const fullCode = generateFullCPP();
-    document.getElementById('codeOutput').innerText = fullCode;
-    document.getElementById('codeModal').style.display = 'block';
+    const code = generateFullCPP();
+    if (code) {
+        document.getElementById('codeOutput').innerText = code;
+        document.getElementById('codeModal').style.display = 'block';
+    }
 };
 
-// Кнопка прошивки
+// Прошивка (Flash)
 document.getElementById('btnFlash').onclick = async () => {
     const status = document.getElementById('status');
     try {
         const code = generateFullCPP();
-        status.innerText = "⏳ Компиляция на сервере...";
-        
+        if (!code) return;
+
+        status.innerText = "⏳ Компиляция...";
         const res = await fetch('http://localhost:3000/compile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -46,20 +73,20 @@ document.getElementById('btnFlash').onclick = async () => {
         if (!res.ok) throw new Error(await res.text());
         const blob = await res.blob();
         
-        status.innerText = "🔌 Выберите ESP32 в списке...";
+        status.innerText = "🔌 Подключите ESP32...";
         const port = await navigator.serial.requestPort();
         const transport = new Transport(port);
         const esploader = new ESPLoader(transport, 115200);
         
         await esploader.main_fn();
-        status.innerText = "💾 Запись прошивки...";
+        status.innerText = "💾 Загрузка...";
         
         await esploader.write_flash({
             fileArray: [{ data: await blob.arrayBuffer(), address: 0x10000 }],
             flash_size: 'keep'
         });
         
-        status.innerText = "✅ Готово! Программа запущена.";
+        status.innerText = "✅ Готово!";
     } catch (e) {
         status.innerText = "❌ Ошибка: " + e.message;
         console.error(e);
