@@ -2,64 +2,51 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>ESP32 Ultimate IDE</title>
+    <title>ESP32 Blockly IDE</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
     <style>
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; background: #2c3e50; }
-        .toolbar { background: #1a252f; color: white; padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
-        #blocklyDiv { flex-grow: 1; width: 100%; background: #fff; }
-        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-flash { background: #27ae60; color: white; }
-        .btn-code { background: #2980b9; color: white; }
-        #status { font-size: 14px; margin-left: auto; color: #ecf0f1; }
-        
-        #codeModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; }
-        .modal-content { background: #1e1e1e; margin: 5% auto; width: 80%; height: 80%; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; }
-        #codeOutput { flex-grow: 1; overflow: auto; background: #000; color: #00ff00; padding: 15px; font-family: monospace; white-space: pre-wrap; }
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; }
+        .nav { background: #1a252f; color: white; padding: 10px; display: flex; gap: 10px; align-items: center; }
+        #blocklyDiv { flex-grow: 1; width: 100%; }
+        #codeModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; }
+        .modal-body { background: #1e1e1e; color: #0f0; margin: 5% auto; width: 80%; height: 80%; padding: 20px; border-radius: 8px; overflow: auto; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
 
-<div class="toolbar">
-    <strong>ESP32 IDE</strong>
-    <button id="btnFlash" class="btn-flash">⚡ ПРОШИТЬ</button>
-    <button id="btnViewCode" class="btn-code">📄 КОД C++</button>
-    <div id="status">Статус: Готов</div>
+<div class="nav">
+    <button id="btnFlash" style="background: #27ae60; color: white;">⚡ ПРОШИТЬ</button>
+    <button id="btnViewCode">📄 КОД</button>
+    <span id="status">Статус: Готов</span>
 </div>
 
 <div id="blocklyDiv"></div>
 
 <div id="codeModal">
-    <div class="modal-content">
-        <h3 style="color:white; margin-top:0;">Arduino Sketch (.ino)</h3>
+    <div class="modal-body">
         <pre id="codeOutput"></pre>
-        <button onclick="document.getElementById('codeModal').style.display='none'" style="background:#e74c3c; color:white; align-self:flex-start; margin-top:10px;">ЗАКРЫТЬ</button>
+        <button onclick="document.getElementById('codeModal').style.display='none'">ЗАКРЫТЬ</button>
     </div>
 </div>
 
 <xml id="toolbox" style="display:none">
-    <category name="Структура" colour="285">
-        <block type="esp32_main_structure"></block>
-    </category>
     <category name="Логика" colour="210">
         <block type="controls_if"></block>
         <block type="logic_compare"></block>
-        <block type="logic_boolean"></block>
+    </category>
+    <category name="ESP32 Ядро" colour="285">
+        <block type="esp32_main_structure"></block>
+        <block type="esp32_delay"></block>
+        <block type="esp32_digital_write"></block>
+        <block type="esp32_serial_print"></block>
+        <block type="esp32_dht_read"></block>
     </category>
     <category name="Математика" colour="230">
         <block type="math_number"></block>
         <block type="math_arithmetic"></block>
     </category>
-    <category name="Периферия" colour="20">
-        <block type="esp32_digital_write"></block>
-        <block type="esp32_delay"></block>
-        <block type="esp32_serial_print"></block>
-    </category>
-    <category name="Датчики" colour="45">
-        <block type="esp32_dht_read"></block>
-    </category>
-    <sep></sep>
     <category name="Переменные" colour="330" custom="VARIABLE"></category>
 </xml>
 
