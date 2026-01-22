@@ -5,21 +5,21 @@
     <title>ESP32 Blockly IDE</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+    
     <style>
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; }
-        .nav { background: #1a252f; color: white; padding: 10px; display: flex; gap: 10px; align-items: center; }
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; background: #2c3e50; }
+        .toolbar { background: #1a252f; color: white; padding: 10px; display: flex; gap: 10px; }
         #blocklyDiv { flex-grow: 1; width: 100%; }
         #codeModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; }
         .modal-body { background: #1e1e1e; color: #0f0; margin: 5% auto; width: 80%; height: 80%; padding: 20px; border-radius: 8px; overflow: auto; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
 
-<div class="nav">
-    <button id="btnFlash" style="background: #27ae60; color: white;">⚡ ПРОШИТЬ</button>
-    <button id="btnViewCode">📄 КОД</button>
-    <span id="status">Статус: Готов</span>
+<div class="toolbar">
+    <button id="btnFlash" style="background:#27ae60; color:white; border:none; padding:8px;">⚡ ПРОШИТЬ</button>
+    <button id="btnViewCode" style="border:none; padding:8px;">📄 КОД C++</button>
+    <span id="status" style="margin-left:auto; color:#bdc3c7;">Статус: Готов</span>
 </div>
 
 <div id="blocklyDiv"></div>
@@ -32,25 +32,18 @@
 </div>
 
 <xml id="toolbox" style="display:none">
+    <category name="Ядро" colour="285">
+        <block type="esp32_main_structure"></block>
+        <block type="esp32_delay"></block>
+        <block type="esp32_serial_print"></block>
+    </category>
     <category name="Логика" colour="210">
         <block type="controls_if"></block>
         <block type="logic_compare"></block>
     </category>
-    <category name="ESP32 Ядро" colour="285">
-        <block type="esp32_main_structure"></block>
-        <block type="esp32_delay"></block>
-        <block type="esp32_digital_write"></block>
-        <block type="esp32_serial_print"></block>
-        <block type="esp32_dht_read"></block>
-    </category>
-    <category name="Математика" colour="230">
-        <block type="math_number"></block>
-        <block type="math_arithmetic"></block>
-    </category>
     <category name="Переменные" colour="330" custom="VARIABLE"></category>
 </xml>
 
-<script src="blocks.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
