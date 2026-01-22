@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -7,45 +6,35 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-const BUILD_DIR = path.join(__dirname, 'build_cache');
-if (!fs.existsSync(BUILD_DIR)) fs.mkdirSync(BUILD_DIR);
+const WORK_DIR = path.join(__dirname, 'build');
+if (!fs.existsSync(WORK_DIR)) fs.mkdirSync(WORK_DIR);
 
 app.post('/compile', (req, res) => {
     const code = req.body.code;
-    if (!code) return res.status(400).send("No code provided");
+    const sketchFolder = path.join(WORK_DIR, 'sketch');
+    const sketchPath = path.join(sketchFolder, 'sketch.ino');
 
-    const sketchName = 'Sketch';
-    const sketchDir = path.join(BUILD_DIR, sketchName);
-    const inoPath = path.join(sketchDir, `${sketchName}.ino`);
+    if (!fs.existsSync(sketchFolder)) fs.mkdirSync(sketchFolder, { recursive: true });
+    fs.writeFileSync(sketchPath, code);
 
-    // 1. Создаем структуру папок для Arduino (Sketch/Sketch.ino)
-    if (!fs.existsSync(sketchDir)) fs.mkdirSync(sketchDir);
-    fs.writeFileSync(inoPath, code);
+    // Команда компиляции для стандартной платы ESP32 Dev Module
+    const cmd = `arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir "${sketchFolder}" "${sketchFolder}"`;
 
-    console.log("Start compiling...");
-    
-    // 2. Запускаем arduino-cli
-    // fqbn esp32:esp32:esp32 - стандартная плата ESP32 Dev Module
-    const cmd = `arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir "${sketchDir}" "${sketchDir}"`;
-
-    exec(cmd, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Compilation error: ${stderr}`);
-            return res.status(500).send(stderr || stdout); // Возвращаем логи ошибки
+    exec(cmd, (err, stdout, stderr) => {
+        if (err) {
+            console.error("Compile Error:", stderr || stdout);
+            return res.status(500).send(stderr || stdout);
         }
-
-        console.log("Compilation success!");
         
-        // 3. Отдаем .bin файл
-        const binPath = path.join(sketchDir, `${sketchName}.ino.bin`);
+        const binPath = path.join(sketchFolder, 'sketch.ino.bin');
         if (fs.existsSync(binPath)) {
-            res.download(binPath, 'firmware.bin');
+            res.download(binPath);
         } else {
-            res.status(500).send("Binary file not found after compilation");
+            res.status(500).send("Binary not found");
         }
     });
 });
 
-app.listen(3000, () => console.log('Compiler server running on port 3000'));
+app.listen(3000, () => console.log('Compiler Backend running on port 3000'));
