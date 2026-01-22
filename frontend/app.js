@@ -1,115 +1,67 @@
-// Импорт ES Module библиотеки esptool
 import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.0/bundle.js';
 
-// Инициализация Blockly
 const workspace = Blockly.inject('blocklyDiv', {
     toolbox: document.getElementById('toolbox'),
     media: 'https://unpkg.com/blockly/media/',
-    scrollbars: true,
-    zoom: { controls: true, wheel: true }
+    scrollbars: true
 });
 
-// Функция для формирования полного кода Arduino C++
-function generateFullSourceCode() {
-    // 1. Обязательно инициализируем генератор перед работой
-    Blockly.JavaScript.init(workspace);
+function generateFullCPP() {
+    // Важно: инициализируем генератор для текущего workspace
+    javascriptGenerator.init(workspace);
     
-    // 2. Получаем код из блоков (тело программы)
-    const blocksCode = Blockly.JavaScript.workspaceToCode(workspace);
+    // Генерируем код всех блоков
+    javascriptGenerator.workspaceToCode(workspace);
     
-    // 3. Собираем все определения (глобальные переменные, инклуды, функции ISR)
-    let definitions = "";
-    if (Blockly.JavaScript.definitions_) {
-        definitions = Object.values(Blockly.JavaScript.definitions_).join('\n');
-    }
+    // Находим блок структуры
+    const mainBlock = workspace.getAllBlocks(false).find(b => b.type === 'esp32_main_structure');
     
-    // 4. Собираем финальный шаблон
-    const fullCode = `
-#include <Arduino.h>
-
-// --- Definitions & Libraries ---
-${definitions}
-
-void setup() {
-  Serial.begin(115200);
-  // Инициализация LittleFS для блоков хранилища, если нужно
-  // LittleFS.begin();
-  
-  // Код, который генерируется блоками
-  ${blocksCode}
+    const setupPart = mainBlock ? mainBlock.generatedSetup : "";
+    const loopPart = mainBlock ? mainBlock.generatedLoop : "";
+    const defs = Object.values(javascriptGenerator.definitions_ || {}).join('\n');
+    
+    return `#include <Arduino.h>\n\n${defs}\n\nvoid setup() {\n  Serial.begin(115200);\n${setupPart}\n}\n\nvoid loop() {\n${loopPart}\n  delay(1);\n}`;
 }
 
-void loop() {
-  // В этой версии Blockly весь код падает в setup, если не использовать спец. блоки цикла.
-  // Это нормально для простых скриптов.
-  delay(10); // Watchdog prevent
-}
-`;
-    return fullCode;
-}
-
-// Обработчик кнопки "ПОСМОТРЕТЬ КОД"
+// Кнопка просмотра кода
 document.getElementById('btnViewCode').onclick = () => {
-    const code = generateFullSourceCode();
-    const outputElem = document.getElementById('codeOutput');
-    const modalElem = document.getElementById('codeModal');
-    
-    outputElem.innerText = code;
-    modalElem.style.display = 'block';
+    const fullCode = generateFullCPP();
+    document.getElementById('codeOutput').innerText = fullCode;
+    document.getElementById('codeModal').style.display = 'block';
 };
 
-// Обработчик кнопки "ПРОШИТЬ"
+// Кнопка прошивки
 document.getElementById('btnFlash').onclick = async () => {
-    const statusEl = document.getElementById('status');
-    const code = generateFullSourceCode();
-    
+    const status = document.getElementById('status');
     try {
-        // ЭТАП 1: Компиляция на сервере
-        statusEl.innerText = "⏳ Компиляция...";
-        console.log("Отправка кода на компиляцию...");
+        const code = generateFullCPP();
+        status.innerText = "⏳ Компиляция на сервере...";
         
-        const response = await fetch('http://localhost:3000/compile', {
+        const res = await fetch('http://localhost:3000/compile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: code })
+            body: JSON.stringify({ code })
         });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error("Ошибка сборки: " + errText);
-        }
-
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-
-        // ЭТАП 2: Прошивка через Web Serial
-        statusEl.innerText = "🔌 Выберите порт...";
         
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        
+        status.innerText = "🔌 Выберите ESP32 в списке...";
         const port = await navigator.serial.requestPort();
         const transport = new Transport(port);
-        const esploader = new ESPLoader(transport, 115200, null); // 115200 - скорость прошивки
-
-        statusEl.innerText = "📡 Подключение к чипу...";
+        const esploader = new ESPLoader(transport, 115200);
+        
         await esploader.main_fn();
-        await esploader.flash_id();
-
-        statusEl.innerText = "💾 Запись во флеш-память...";
+        status.innerText = "💾 Запись прошивки...";
         
-        // Запись бинарного файла по адресу 0x10000 (стандарт для Arduino ESP32)
-        // Для некоторых загрузчиков может потребоваться 0x0 или набор из 4 файлов (bootloader и т.д.)
-        // В рамках Docker arduino-cli обычно делает merged bin.
         await esploader.write_flash({
-            fileArray: [{ data: arrayBuffer, address: 0x10000 }],
-            flash_size: 'keep',
-            erase_all: false,
-            compress: true,
+            fileArray: [{ data: await blob.arrayBuffer(), address: 0x10000 }],
+            flash_size: 'keep'
         });
-
-        statusEl.innerText = "✅ Готово! Перезагрузите ESP32.";
         
+        status.innerText = "✅ Готово! Программа запущена.";
     } catch (e) {
+        status.innerText = "❌ Ошибка: " + e.message;
         console.error(e);
-        statusEl.innerText = "❌ Ошибка: " + e.message;
-        alert("Ошибка: " + e.message);
     }
 };
