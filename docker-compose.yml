@@ -1,15 +1,28 @@
 version: '3.8'
+
 services:
-  compiler:
+  backend:
     build: ./backend
     ports:
-      - "3000:3000"
+      - "5000:5000"
     volumes:
-      - ./arduino_libs:/root/Arduino/libraries
-  
+      - ./backend:/app
+      - ./projects:/app/projects
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+    restart: unless-stopped
+
   frontend:
     image: nginx:alpine
     ports:
       - "8080:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  projects:
