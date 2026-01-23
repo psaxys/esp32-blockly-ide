@@ -39,4 +39,21 @@ docker-compose up -d
 4. Откройте в браузере:
 ```bash
 http://localhost:8080
-``` 
+```
+🐳 Docker команды
+```bash
+# Запуск
+docker-compose up -d
+
+# Остановка
+docker-compose down
+
+# Просмотр логов
+docker-compose logs -f
+
+# Пересборка
+docker-compose build --no-cache
+
+# Очистка
+docker system prune -f
+```
