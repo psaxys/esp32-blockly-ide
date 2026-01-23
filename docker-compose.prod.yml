@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./projects:/app/projects
+      - ./blockly-assets:/app/blockly-assets
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+    restart: always
+    networks:
+      - esp32-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+      - ./blockly-assets:/usr/share/nginx/html/blockly
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - esp32-network
+
+  redis:
+    image: redis:alpine
+    restart: always
+    networks:
+      - esp32-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=esp32_blockly
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - esp32-network
+
+networks:
+  esp32-network:
+    driver: bridge
+
+volumes:
+  projects:
+  blockly-assets:
+  postgres_data:
