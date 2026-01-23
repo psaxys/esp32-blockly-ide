@@ -11,12 +11,17 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     libssl-dev \
     libffi-dev \
+    ca-certificates \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка Node.js для работы с Blockly
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Установка Node.js 20.x (совместимой с npm 11.8.0)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g npm@latest
+    && npm install -g npm@10.5.0  # Устанавливаем совместимую версию npm
+
+# Проверка версий
+RUN node --version && npm --version
 
 # Копирование зависимостей
 COPY requirements.txt .
