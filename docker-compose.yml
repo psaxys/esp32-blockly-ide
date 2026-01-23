@@ -8,11 +8,9 @@ services:
     volumes:
       - ./backend:/app
       - ./projects:/app/projects
-      - ./blockly-assets:/app/blockly-assets
     environment:
       - FLASK_ENV=development
       - FLASK_APP=app.py
-      - BLOCKLY_VERSION=12.3.1
     restart: unless-stopped
 
   frontend:
@@ -21,12 +19,9 @@ services:
       - "8080:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./blockly-assets:/usr/share/nginx/html/blockly
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
   projects:
-  blockly-assets:
