@@ -24,8 +24,8 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/psaxys/esp32-blockly.git
-cd esp32-blockly
+git clone https://github.com/psaxys/esp32-blockly-ide.git
+cd esp32-blockly-ide
 ```
 2. Клонируйте репозиторий:
 ```bash
