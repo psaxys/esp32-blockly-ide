@@ -26,3 +26,17 @@
 ```bash
 git clone https://github.com/psaxys/esp32-blockly.git
 cd esp32-blockly
+```
+2. Клонируйте репозиторий:
+```bash
+cp .env.example .env
+# Отредактируйте .env при необходимости
+```
+3. Запустите систему
+```bash
+docker-compose up -d
+```
+4. Откройте в браузере:
+```bash
+http://localhost:8080
+``` 
