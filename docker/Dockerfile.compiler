@@ -1,0 +1,45 @@
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    make \
+    gcc \
+    g++ \
+    libusb-1.0-0 \
+    libusb-1.0-0-dev \
+    libffi-dev \
+    libssl-dev \
+    pkg-config \
+    cmake \
+    ninja-build \
+    ccache \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установка PlatformIO
+RUN pip install --no-cache-dir platformio==6.1.11
+
+# Установка ESP32 platform с кэшированием
+RUN pio platform install espressif32@5.4.0 \
+    && pio platform install espressif32@5.4.0 --with-package framework-arduinoespressif32 \
+    && pio platform install espressif32@5.4.0 --with-package toolchain-xtensa-esp32
+
+# Установка часто используемых библиотек
+RUN pio lib install \
+    "Adafruit Unified Sensor@^1.1.9" \
+    "DHT sensor library@^1.4.6" \
+    "PubSubClient@^2.8" \
+    "ArduinoJson@^7.0.0" \
+    "WiFiManager@^2.0.16"
+
+# Настройка кэширования
+ENV PLATFORMIO_CORE_DIR=/root/.platformio
+ENV PATH="/root/.platformio/penv/bin:$PATH"
+
+WORKDIR /workspaces
+
+CMD ["tail", "-f", "/dev/null"]
