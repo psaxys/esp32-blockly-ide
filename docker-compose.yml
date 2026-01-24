@@ -1,27 +1,59 @@
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
+  web:
+    build: .
     ports:
-      - "5000:5000"
+      - "8080:8080"
     volumes:
-      - ./backend:/app
-      - ./projects:/app/projects
+      - ./frontend:/usr/src/app/frontend
+      - ./backend:/usr/src/app/backend
+      - ./workspaces:/usr/src/app/workspaces
+      - ./examples:/usr/src/app/examples
     environment:
-      - FLASK_ENV=development
-      - FLASK_APP=app.py
+      - NODE_ENV=production
+      - PORT=8080
+      - MAX_WORKSPACE_SIZE=100MB
+    restart: unless-stopped
+    networks:
+      - esp32-net
+
+  compiler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.compiler
+    volumes:
+      - ./workspaces:/workspaces
+      - compiler-cache:/root/.platformio
+      - compiler-packages:/root/.platformio/packages
+    environment:
+      - ESPTOOL_VERSION=5.1.0
+      - PIO_CACHE_DIR=/root/.platformio
+    cap_add:
+      - SYS_PTRACE
+    devices:
+      - /dev/bus/usb:/dev/bus/usb:rw
+    privileged: true
+    networks:
+      - esp32-net
     restart: unless-stopped
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "8080:80"
+  esptool:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.esptool
     volumes:
-      - ./frontend:/usr/share/nginx/html
-    depends_on:
-      - backend
+      - ./workspaces:/workspaces
+      - /dev/bus/usb:/dev/bus/usb:rw
+    privileged: true
+    networks:
+      - esp32-net
     restart: unless-stopped
 
 volumes:
-  projects:
+  compiler-cache:
+  compiler-packages:
+
+networks:
+  esp32-net:
+    driver: bridge
