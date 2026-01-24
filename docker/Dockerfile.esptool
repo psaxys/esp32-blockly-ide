@@ -17,11 +17,12 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка esptool и зависимостей
-RUN pip install --no-cache-dir \
+# Установка esptool 5.1.0 с совместимыми зависимостями
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
     esptool==5.1.0 \
     pyserial==3.5 \
-    cryptography==41.0.7 \
+    cryptography>=43.0.0 \
     pyparsing==3.1.1 \
     bitstring==4.1.4
 
