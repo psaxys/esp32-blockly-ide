@@ -22,12 +22,12 @@ COPY frontend ./frontend/
 WORKDIR /usr/src/app/backend
 RUN npm install --production
 
-# Возврат в корень для создания директорий
+# Создание необходимых директорий
 WORKDIR /usr/src/app
 RUN mkdir -p /usr/src/app/workspaces \
     && mkdir -p /usr/src/app/examples
 
-# Финальная рабочая директория — там, где лежит server.js
+# Финальная рабочая директория для запуска сервера
 WORKDIR /usr/src/app/backend
 
 # Открытие порта
