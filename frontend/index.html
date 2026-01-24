@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Blockly Constructor v2.0</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly/blocks_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/msg/ru.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.0/min/vs/loader.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-microchip"></i>
+                    <h1>ESP32 Blockly Constructor</h1>
+                </div>
+                <div class="version">v2.0 • Python 3.12 • PlatformIO</div>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Готов</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Toolbox -->
+            <div class="panel left-panel">
+                <div class="panel-header">
+                    <i class="fas fa-toolbox"></i>
+                    <h3>Библиотека блоков</h3>
+                </div>
+                <div class="toolbox-container">
+                    <div class="search-box">
+                        <input type="text" id="blockSearch" placeholder="Поиск блоков...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="toolbox-categories">
+                        <div class="category" data-category="basic">
+                            <div class="category-header">
+                                <i class="fas fa-cube"></i>
+                                <span>Основные</span>
+                            </div>
+                            <div class="block-list">
+                                <div class="block-item" data-type="controls_if" draggable="true">
+                                    <i class="fas fa-code-branch"></i>
+                                    <span>Условие If</span>
+                                </div>
+                                <div class="block-item" data-type="controls_whileUntil" draggable="true">
+                                    <i class="fas fa-redo"></i>
+                                    <span>Цикл While</span>
+                                </div>
+                                <div class="block-item" data-type="math_number" draggable="true">
+                                    <i class="fas fa-hashtag"></i>
+                                    <span>Число</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="category" data-category="gpio">
+                            <div class="category-header">
+                                <i class="fas fa-bolt"></i>
+                                <span>GPIO</span>
+                            </div>
+                            <div class="block-list">
+                                <div class="block-item" data-type="pin_mode" draggable="true">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Pin Mode</span>
+                                </div>
+                                <div class="block-item" data-type="digital_write" draggable="true">
+                                    <i class="fas fa-toggle-on"></i>
+                                    <span>Digital Write</span>
+                                </div>
+                                <div class="block-item" data-type="digital_read" draggable="true">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Digital Read</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Добавьте больше категорий по необходимости -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel: Blockly Workspace -->
+            <div class="panel center-panel">
+                <div class="panel-header">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="blocks">
+                            <i class="fas fa-th-large"></i> Блоки
+                        </button>
+                        <button class="tab-btn" data-tab="code">
+                            <i class="fas fa-code"></i> Код
+                        </button>
+                        <button class="tab-btn" data-tab="serial">
+                            <i class="fas fa-terminal"></i> Монитор
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tab-content active" id="blocks-tab">
+                    <div id="blocklyDiv"></div>
+                </div>
+                
+                <div class="tab-content" id="code-tab">
+                    <div class="code-header">
+                        <select id="codeViewSelect">
+                            <option value="cpp">C++</option>
+                            <option value="python">MicroPython</option>
+                            <option value="json">JSON</option>
+                        </select>
+                        <div class="code-actions">
+                            <button class="btn-icon" title="Копировать" onclick="copyCode()">
+                                <i class="far fa-copy"></i>
+                            </button>
+                            <button class="btn-icon" title="Форматировать" onclick="formatCode()">
+                                <i class="fas fa-indent"></i>
+                            </button>
+                            <button class="btn-icon" title="Сохранить как файл" onclick="saveCodeAsFile()">
+                                <i class="far fa-save"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="codeEditor"></div>
+                    <div class="code-stats">
+                        <span id="lineCount">Строк: 0</span>
+                        <span id="charCount">Символов: 0</span>
+                        <span id="complexity">Сложность: Низкая</span>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="serial-tab">
+                    <div class="serial-controls">
+                        <button class="btn" onclick="connectSerial()">
+                            <i class="fas fa-plug"></i> Подключить
+                        </button>
+                        <select id="baudRate">
+                            <option value="9600">9600</option>
+                            <option value="115200" selected>115200</option>
+                            <option value="921600">921600</option>
+                        </select>
+                        <button class="btn" onclick="clearSerial()">
+                            <i class="fas fa-trash"></i> Очистить
+                        </button>
+                    </div>
+                    <div class="serial-output" id="serialOutput">
+                        <div class="welcome-message">
+                            <i class="fas fa-info-circle"></i>
+                            <p>Подключитесь к ESP32 для просмотра вывода Serial</p>
+                        </div>
+                    </div>
+                    <div class="serial-input">
+                        <input type="text" id="serialInput" placeholder="Введите команду...">
+                        <button onclick="sendSerial()">Отправить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Properties & Projects -->
+            <div class="panel right-panel">
+                <div class="panel-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <h3>Настройки проекта</h3>
+                </div>
+                
+                <div class="settings-section">
+                    <h4><i class="fas fa-cog"></i> Параметры компиляции</h4>
+                    <div class="setting-item">
+                        <label>Оптимизация:</label>
+                        <select id="optimization">
+                            <option value="debug">Debug</option>
+                            <option value="size">Минимальный размер</option>
+                            <option value="speed">Максимальная скорость</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Задержка в loop():</label>
+                        <input type="number" id="loopDelay" value="10" min="0" max="1000">
+                        <span>мс</span>
+                    </div>
+                    <div class="setting-item">
+                        <label><input type="checkbox" id="enableWifi"> Включить WiFi</label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4><i class="fas fa-project-diagram"></i> Проекты</h4>
+                    <div class="projects-list" id="projectsList">
+                        <!-- Динамически загружается -->
+                    </div>
+                    <button class="btn-secondary" onclick="loadExample()">
+                        <i class="fas fa-file-code"></i> Загрузить пример
+                    </button>
+                </div>
+                
+                <div class="settings-section">
+                    <h4><i class="fas fa-info-circle"></i> Информация</h4>
+                    <div class="info-box">
+                        <p><strong>Компилятор:</strong> xtensa-esp32-elf-gcc 8.4.0</p>
+                        <p><strong>Framework:</strong> Arduino-ESP32 3.0.0</p>
+                        <p><strong>Python:</strong> 3.12.0</p>
+                        <p><strong>PlatformIO:</strong> 6.1.11</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Controls & Status -->
+        <div class="controls-panel">
+            <div class="control-group">
+                <button class="btn-control btn-primary" onclick="generateCode()">
+                    <i class="fas fa-code"></i>
+                    <span>Генерировать код</span>
+                </button>
+                <button class="btn-control btn-warning" onclick="compileProject()">
+                    <i class="fas fa-cogs"></i>
+                    <span>Компилировать</span>
+                </button>
+                <button class="btn-control btn-success" onclick="uploadToESP32()">
+                    <i class="fas fa-upload"></i>
+                    <span>Прошить ESP32</span>
+                </button>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn-control" onclick="saveProject()">
+                    <i class="fas fa-save"></i>
+                    <span>Сохранить</span>
+                </button>
+                <button class="btn-control" onclick="loadProject()">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Загрузить</span>
+                </button>
+                <button class="btn-control" onclick="clearWorkspace()">
+                    <i class="fas fa-trash"></i>
+                    <span>Очистить</span>
+                </button>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-message" id="statusMessage">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Готов к работе</span>
+                </div>
+                <div class="status-progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-microchip"></i> Прошивка ESP32</h3>
+            <div class="upload-steps">
+                <div class="step active" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Подключение устройства</h4>
+                        <p>Подключите ESP32 к компьютеру через USB</p>
+                        <button class="btn" onclick="detectESP32()">
+                            <i class="fas fa-search"></i> Найти устройство
+                        </button>
+                    </div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Загрузка прошивки</h4>
+                        <div class="upload-progress">
+                            <div class="progress" id="uploadProgress"></div>
+                            <span id="uploadPercent">0%</span>
+                        </div>
+                        <p id="uploadStatus">Ожидание начала загрузки...</p>
+                    </div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Завершение</h4>
+                        <p id="completionMessage">Прошивка завершена успешно!</p>
+                        <button class="btn" onclick="closeModal()">
+                            <i class="fas fa-check"></i> Готово
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="blockly-config.js"></script>
+    <script src="webserial-upload.js"></script>
+    <script src="code-viewer.js"></script>
+    <script>
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProjects();
+            initTabs();
+            initDragAndDrop();
+        });
+    </script>
+</body>
+</html>
