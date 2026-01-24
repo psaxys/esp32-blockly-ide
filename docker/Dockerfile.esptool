@@ -1,0 +1,35 @@
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    make \
+    gcc \
+    g++ \
+    libusb-1.0-0 \
+    libusb-1.0-0-dev \
+    libffi-dev \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установка esptool и зависимостей
+RUN pip install --no-cache-dir \
+    esptool==5.1.0 \
+    pyserial==3.5 \
+    cryptography==41.0.7 \
+    pyparsing==3.1.1 \
+    bitstring==4.1.4
+
+# Создание рабочей директории
+WORKDIR /workspaces
+
+# Скрипт для прошивки
+COPY docker/esptool-script.sh /usr/local/bin/esptool-script.sh
+RUN chmod +x /usr/local/bin/esptool-script.sh
+
+ENTRYPOINT ["/usr/local/bin/esptool-script.sh"]
