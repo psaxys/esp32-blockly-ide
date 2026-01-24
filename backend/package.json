@@ -1,0 +1,38 @@
+{
+  "name": "esp32-blockly-constructor",
+  "version": "2.0.0",
+  "description": "Visual programming environment for ESP32 with Docker and WebSerial",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'Frontend is static, no build required'",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "keywords": [
+    "esp32",
+    "blockly",
+    "docker",
+    "webserial",
+    "iot",
+    "arduino",
+    "platformio"
+  ],
+  "author": "ESP32 Blockly Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
