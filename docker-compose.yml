@@ -8,6 +8,8 @@ services:
       - ./backend:/usr/src/app/backend
       - ./workspaces:/usr/src/app/workspaces
       - ./examples:/usr/src/app/examples
+      # ВАЖНО: защищаем node_modules от перезаписи локальной папкой
+      - /usr/src/app/backend/node_modules
     environment:
       - NODE_ENV=production
       - PORT=8080
