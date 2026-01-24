@@ -28,8 +28,4 @@ RUN pip install --no-cache-dir \
 # Создание рабочей директории
 WORKDIR /workspaces
 
-# Скрипт для прошивки
-COPY docker/esptool-script.sh /usr/local/bin/esptool-script.sh
-RUN chmod +x /usr/local/bin/esptool-script.sh
-
-ENTRYPOINT ["/usr/local/bin/esptool-script.sh"]
+CMD ["tail", "-f", "/dev/null"]
