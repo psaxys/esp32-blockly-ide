@@ -29,7 +29,7 @@ RUN pio platform install espressif32@5.4.0 \
     && pio platform install espressif32@5.4.0 --with-package toolchain-xtensa-esp32
 
 # Установка часто используемых библиотек
-RUN pio lib install \
+RUN pio lib -g install \
     "Adafruit Unified Sensor@^1.1.9" \
     "DHT sensor library@^1.4.6" \
     "PubSubClient@^2.8" \
