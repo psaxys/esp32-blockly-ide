@@ -1,6 +1,23 @@
-// Конфигурация Blockly 12.3.1 без конфликтов
+/**
+ * Конфигурация Blockly 12.3.1 для ESP32
+ */
+
+// 1. ЗАПЛАТКА: Предотвращаем ошибку повторной регистрации расширений
+(function() {
+    if (typeof Blockly !== 'undefined' && Blockly.Extensions) {
+        const originalRegister = Blockly.Extensions.register;
+        Blockly.Extensions.register = function(name, callback) {
+            if (Blockly.Extensions.isRegistered(name)) {
+                console.warn('Blockly: Расширение "' + name + '" уже было зарегистрировано. Пропускаем.');
+                return;
+            }
+            return originalRegister.call(this, name, callback);
+        };
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем, не был ли Blockly уже инициализирован
+    // Проверка на двойную инициализацию
     if (window.workspace) {
         console.warn('Blockly уже инициализирован');
         return;
@@ -13,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-        // Создаем рабочую область с более простой конфигурацией
+        // Инициализация рабочей области
         window.workspace = Blockly.inject(blocklyDiv, {
             toolbox: getToolboxConfig(),
             zoom: {
@@ -25,21 +42,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 scaleSpeed: 1.2
             },
             trashcan: true,
-            horizontalLayout: false,
-            toolboxPosition: 'start',
-            css: true,
             media: 'https://unpkg.com/blockly/media/',
-            rtl: false,
             scrollbars: true,
-            sounds: true,
-            oneBasedIndex: true,
-            collapse: true,
-            comments: false, // Отключаем комментарии для уменьшения конфликтов
-            disable: false,
-            maxBlocks: Infinity,
-            maxInstances: {
-                'math_number': Infinity,
-                'text': Infinity
+            move: {
+                scrollbars: true,
+                drag: true,
+                wheel: false
             }
         });
         
@@ -48,10 +56,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Создаем кастомные блоки
         createCustomBlocks();
         
-        // Обновляем код при изменении блоков
+        // Автоматическая генерация кода при изменениях
         window.workspace.addChangeListener(function(event) {
             if (!event.isUiEvent) {
-                setTimeout(generateCode, 100);
+                // Небольшая задержка, чтобы не нагружать браузер
+                if (window.genTimer) clearTimeout(window.genTimer);
+                window.genTimer = setTimeout(generateCode, 200);
             }
         });
         
@@ -60,331 +70,190 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Упрощенная конфигурация Toolbox
+// Конфигурация Toolbox
 function getToolboxConfig() {
     return {
         kind: 'categoryToolbox',
         contents: [
-            {
-                kind: 'category',
-                name: 'Логика',
-                colour: '#5C81A6',
-                contents: [
-                    { kind: 'block', type: 'controls_if' },
-                    { kind: 'block', type: 'logic_compare' },
-                    { kind: 'block', type: 'logic_operation' },
-                    { kind: 'block', type: 'logic_boolean' }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Циклы',
-                colour: '#5CA65C',
-                contents: [
-                    { kind: 'block', type: 'controls_whileUntil' },
-                    { kind: 'block', type: 'controls_for' },
-                    { kind: 'block', type: 'controls_repeat' }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Математика',
-                colour: '#A65C81',
-                contents: [
-                    { kind: 'block', type: 'math_number' },
-                    { kind: 'block', type: 'math_arithmetic' },
-                    { kind: 'block', type: 'math_single' }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Текст',
-                colour: '#A6A65C',
-                contents: [
-                    { kind: 'block', type: 'text' },
-                    { kind: 'block', type: 'text_join' }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Переменные',
-                colour: '#FF8C1A',
-                custom: 'VARIABLE'
-            },
-            {
-                kind: 'category',
-                name: 'Функции',
-                colour: '#995BA5',
-                custom: 'PROCEDURE'
-            },
-            {
-                kind: 'category',
-                name: 'ESP32 GPIO',
-                colour: '#4A90E2',
-                contents: [
-                    {
-                        kind: 'block',
-                        type: 'esp32_pin_mode'
-                    },
-                    {
-                        kind: 'block',
-                        type: 'esp32_digital_write'
-                    },
-                    {
-                        kind: 'block',
-                        type: 'esp32_digital_read'
-                    }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Время',
-                colour: '#20B2AA',
-                contents: [
-                    { kind: 'block', type: 'esp32_delay' }
-                ]
-            },
-            {
-                kind: 'category',
-                name: 'Serial',
-                colour: '#FF6347',
-                contents: [
-                    { kind: 'block', type: 'esp32_serial_begin' },
-                    { kind: 'block', type: 'esp32_serial_print' }
-                ]
-            }
+            { kind: 'category', name: 'Логика', colour: '#5C81A6', contents: [
+                { kind: 'block', type: 'controls_if' },
+                { kind: 'block', type: 'logic_compare' },
+                { kind: 'block', type: 'logic_operation' },
+                { kind: 'block', type: 'logic_boolean' }
+            ]},
+            { kind: 'category', name: 'Циклы', colour: '#5CA65C', contents: [
+                { kind: 'block', type: 'controls_whileUntil' },
+                { kind: 'block', type: 'controls_for' },
+                { kind: 'block', type: 'controls_repeat' }
+            ]},
+            { kind: 'category', name: 'Математика', colour: '#A65C81', contents: [
+                { kind: 'block', type: 'math_number' },
+                { kind: 'block', type: 'math_arithmetic' }
+            ]},
+            { kind: 'category', name: 'Переменные', colour: '#FF8C1A', custom: 'VARIABLE' },
+            { kind: 'category', name: 'Функции', colour: '#995BA5', custom: 'PROCEDURE' },
+            { kind: 'sep' },
+            { kind: 'category', name: 'ESP32 GPIO', colour: '#4A90E2', contents: [
+                { kind: 'block', type: 'esp32_pin_mode' },
+                { kind: 'block', type: 'esp32_digital_write' },
+                { kind: 'block', type: 'esp32_digital_read' }
+            ]},
+            { kind: 'category', name: 'Время и Serial', colour: '#FF6347', contents: [
+                { kind: 'block', type: 'esp32_delay' },
+                { kind: 'block', type: 'esp32_serial_begin' },
+                { kind: 'block', type: 'esp32_serial_print' }
+            ]}
         ]
     };
 }
 
-// Создаем кастомные блоки с уникальными именами
+// Кастомные блоки
 function createCustomBlocks() {
-    // Проверяем, не были ли блоки уже созданы
-    if (window.blocksCreated) {
-        return;
-    }
+    if (window.blocksCreated) return;
     window.blocksCreated = true;
-    
-    // Блок для настройки пина ESP32
+
+    // Массив пинов ESP32
+    const esp32_pins = [
+        ["2 (LED)", "2"], ["4", "4"], ["5", "5"], ["12", "12"], ["13", "13"],
+        ["14", "14"], ["15", "15"], ["16", "16"], ["17", "17"], ["18", "18"],
+        ["19", "19"], ["21", "21"], ["22", "22"], ["23", "23"], ["25", "25"],
+        ["26", "26"], ["27", "27"], ["32", "32"], ["33", "33"]
+    ];
+
     Blockly.Blocks['esp32_pin_mode'] = {
         init: function() {
             this.appendDummyInput()
                 .appendField("Настроить пин")
-                .appendField(new Blockly.FieldDropdown([
-                    ["2", "2"], ["4", "4"], ["5", "5"], ["12", "12"],
-                    ["13", "13"], ["14", "14"], ["15", "15"], ["16", "16"],
-                    ["17", "17"], ["18", "18"], ["19", "19"], ["21", "21"],
-                    ["22", "22"], ["23", "23"], ["25", "25"], ["26", "26"],
-                    ["27", "27"], ["32", "32"], ["33", "33"]
-                ]), "PIN")
+                .appendField(new Blockly.FieldDropdown(esp32_pins), "PIN")
                 .appendField("как")
-                .appendField(new Blockly.FieldDropdown([
-                    ["Выход (OUTPUT)", "OUTPUT"],
-                    ["Вход (INPUT)", "INPUT"],
-                    ["Вход с подтяжкой (INPUT_PULLUP)", "INPUT_PULLUP"]
-                ]), "MODE");
+                .appendField(new Blockly.FieldDropdown([["ВЫХОД", "OUTPUT"], ["ВХОД", "INPUT"], ["PULLUP", "INPUT_PULLUP"]]), "MODE");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(230);
-            this.setTooltip("Настройка режима работы пина ESP32");
-            this.setHelpUrl("");
         }
     };
 
-    // Блок для записи в цифровой пин ESP32
     Blockly.Blocks['esp32_digital_write'] = {
         init: function() {
             this.appendDummyInput()
                 .appendField("Установить пин")
-                .appendField(new Blockly.FieldDropdown([
-                    ["2", "2"], ["4", "4"], ["5", "5"], ["12", "12"],
-                    ["13", "13"], ["14", "14"], ["15", "15"], ["16", "16"],
-                    ["17", "17"], ["18", "18"], ["19", "19"], ["21", "21"],
-                    ["22", "22"], ["23", "23"], ["25", "25"], ["26", "26"],
-                    ["27", "27"], ["32", "32"], ["33", "33"]
-                ]), "PIN")
+                .appendField(new Blockly.FieldDropdown(esp32_pins), "PIN")
                 .appendField("в")
-                .appendField(new Blockly.FieldDropdown([
-                    ["HIGH (ВКЛ)", "HIGH"],
-                    ["LOW (ВЫКЛ)", "LOW"]
-                ]), "STATE");
+                .appendField(new Blockly.FieldDropdown([["ВЫСОКИЙ (1)", "HIGH"], ["НИЗКИЙ (0)", "LOW"]]), "STATE");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(230);
-            this.setTooltip("Установка HIGH или LOW на цифровом пине ESP32");
-            this.setHelpUrl("");
         }
     };
 
-    // Блок для чтения цифрового пина ESP32
     Blockly.Blocks['esp32_digital_read'] = {
         init: function() {
             this.appendDummyInput()
-                .appendField("Прочитать пин")
-                .appendField(new Blockly.FieldDropdown([
-                    ["2", "2"], ["4", "4"], ["5", "5"], ["12", "12"],
-                    ["13", "13"], ["14", "14"], ["15", "15"], ["16", "16"],
-                    ["17", "17"], ["18", "18"], ["19", "19"], ["21", "21"],
-                    ["22", "22"], ["23", "23"], ["25", "25"], ["26", "26"],
-                    ["27", "27"], ["32", "32"], ["33", "33"]
-                ]), "PIN");
-            this.setOutput(true, 'Boolean');
+                .appendField("Считать пин")
+                .appendField(new Blockly.FieldDropdown(esp32_pins), "PIN");
+            this.setOutput(true, "Boolean");
             this.setColour(230);
-            this.setTooltip("Чтение состояния цифрового пина ESP32 (HIGH/LOW)");
-            this.setHelpUrl("");
         }
     };
 
-    // Блок для задержки ESP32
     Blockly.Blocks['esp32_delay'] = {
         init: function() {
             this.appendDummyInput()
-                .appendField("Задержка")
-                .appendField(new Blockly.FieldNumber(1000, 0, 60000, 1), "TIME")
+                .appendField("Пауза")
+                .appendField(new Blockly.FieldNumber(1000, 0), "TIME")
                 .appendField("мс");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(160);
-            this.setTooltip("Задержка в миллисекундах для ESP32");
-            this.setHelpUrl("");
         }
     };
 
-    // Блок для Serial.begin ESP32
     Blockly.Blocks['esp32_serial_begin'] = {
         init: function() {
             this.appendDummyInput()
                 .appendField("Serial начать")
-                .appendField(new Blockly.FieldDropdown([
-                    ["9600", "9600"],
-                    ["115200", "115200"],
-                    ["921600", "921600"]
-                ]), "BAUD");
+                .appendField(new Blockly.FieldDropdown([["115200", "115200"], ["9600", "9600"]]), "BAUD");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(300);
-            this.setTooltip("Инициализация Serial порта на ESP32");
-            this.setHelpUrl("");
         }
     };
 
-    // Блок для Serial.print ESP32
     Blockly.Blocks['esp32_serial_print'] = {
         init: function() {
-            this.appendValueInput("TEXT")
-                .setCheck(["String", "Number", "Boolean"])
-                .appendField("Serial напечатать");
+            this.appendValueInput("TEXT").setCheck(null).appendField("Serial печать");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(300);
-            this.setTooltip("Отправка данных в Serial порт ESP32");
-            this.setHelpUrl("");
         }
     };
 }
 
-// Генератор кода для ESP32 (C++)
+// 2. Инициализация генератора C++
 Blockly.Cpp = new Blockly.Generator('C++');
+Blockly.Cpp.ORDER_ATOMIC = 0;
+Blockly.Cpp.ORDER_NONE = 99;
 
-// Определение генераторов для каждого кастомного блока
+// Правила генерации
 Blockly.Cpp['esp32_pin_mode'] = function(block) {
-    const pin = block.getFieldValue('PIN');
-    const mode = block.getFieldValue('MODE');
-    return `pinMode(${pin}, ${mode});\n`;
+    return `pinMode(${block.getFieldValue('PIN')}, ${block.getFieldValue('MODE')});\n`;
 };
 
 Blockly.Cpp['esp32_digital_write'] = function(block) {
-    const pin = block.getFieldValue('PIN');
-    const state = block.getFieldValue('STATE');
-    return `digitalWrite(${pin}, ${state});\n`;
+    return `digitalWrite(${block.getFieldValue('PIN')}, ${block.getFieldValue('STATE')});\n`;
 };
 
 Blockly.Cpp['esp32_digital_read'] = function(block) {
-    const pin = block.getFieldValue('PIN');
-    return [`digitalRead(${pin})`, Blockly.Cpp.ORDER_ATOMIC];
+    return [`digitalRead(${block.getFieldValue('PIN')})`, Blockly.Cpp.ORDER_ATOMIC];
 };
 
 Blockly.Cpp['esp32_delay'] = function(block) {
-    const time = block.getFieldValue('TIME');
-    return `delay(${time});\n`;
+    return `delay(${block.getFieldValue('TIME')});\n`;
 };
 
 Blockly.Cpp['esp32_serial_begin'] = function(block) {
-    const baud = block.getFieldValue('BAUD');
-    return `Serial.begin(${baud});\n`;
+    return `Serial.begin(${block.getFieldValue('BAUD')});\n`;
 };
 
 Blockly.Cpp['esp32_serial_print'] = function(block) {
-    const text = Blockly.Cpp.valueToCode(block, 'TEXT', Blockly.Cpp.ORDER_ATOMIC) || '""';
-    return `Serial.print(${text});\n`;
+    const val = Blockly.Cpp.valueToCode(block, 'TEXT', Blockly.Cpp.ORDER_ATOMIC) || '" "';
+    return `Serial.println(${val});\n`;
 };
 
-// Стандартные блоки
 Blockly.Cpp['math_number'] = function(block) {
-    const number = block.getFieldValue('NUM');
-    return [number, Blockly.Cpp.ORDER_ATOMIC];
+    return [block.getFieldValue('NUM'), Blockly.Cpp.ORDER_ATOMIC];
 };
 
-Blockly.Cpp['text'] = function(block) {
-    const text = block.getFieldValue('TEXT');
-    return ['"' + text + '"', Blockly.Cpp.ORDER_ATOMIC];
-};
-
-Blockly.Cpp['logic_boolean'] = function(block) {
-    const bool = block.getFieldValue('BOOL') === 'TRUE';
-    return [bool ? 'true' : 'false', Blockly.Cpp.ORDER_ATOMIC];
-};
-
-// Генерация кода
+// Функция генерации полного кода
 function generateCode() {
+    if (!window.workspace) return;
+    
     try {
-        if (!window.workspace) {
-            console.error('Рабочая область Blockly не инициализирована');
-            return '// Рабочая область не инициализирована\n';
-        }
-        
-        const allBlocks = window.workspace.getTopBlocks(false);
+        const topBlocks = window.workspace.getTopBlocks(false);
         let setupCode = '';
         let loopCode = '';
         
-        for (const block of allBlocks) {
+        topBlocks.forEach(block => {
             const code = Blockly.Cpp.blockToCode(block);
-            if (code) {
-                // Простая эвристика: если блок не в цикле/условии, идет в setup
-                if (block.type === 'esp32_pin_mode' || block.type === 'esp32_serial_begin') {
-                    setupCode += code;
-                } else {
-                    loopCode += code;
-                }
+            if (block.type === 'esp32_pin_mode' || block.type === 'esp32_serial_begin') {
+                setupCode += code;
+            } else {
+                loopCode += code;
             }
-        }
+        });
         
-        const fullCode = `// Функция настройки блоков
-void setup_blocks() {
-${setupCode ? '    ' + setupCode.trim().replace(/\n/g, '\n    ') : '    // Нет блоков для setup'}
-}
+        const finalCode = `// ESP32 Generated Code\n\nvoid setup() {\n  ${setupCode.replace(/\n/g, '\n  ')}\n}\n\nvoid loop() {\n  ${loopCode.replace(/\n/g, '\n  ')}\n}`;
+        
+        // Отправка в редактор (code-viewer.js)
+        if (window.codeViewer && typeof window.codeViewer.setCode === 'function') {
+            window.codeViewer.setCode(finalCode, 'cpp');
+        } else {
+            const editorDiv = document.getElementById('codeEditor');
+            if (editorDiv) editorDiv.innerText = finalCode;
+        }
 
-// Функция выполнения блоков
-void loop_blocks() {
-${loopCode ? '    ' + loopCode.trim().replace(/\n/g, '\n    ') : '    // Нет блоков для loop'}
-}`;
-        
-        // Обновляем редактор кода
-        if (window.codeViewer) {
-            window.codeViewer.setCode(fullCode, 'cpp');
-        }
-        
-        updateStatus('Код успешно сгенерирован', 'success');
-        return fullCode;
-    } catch (error) {
-        console.error('Ошибка генерации кода:', error);
-        updateStatus('Ошибка генерации кода: ' + error.message, 'error');
-        return '// Ошибка генерации кода\n';
+        return finalCode;
+    } catch (e) {
+        console.error("Ошибка генерации:", e);
     }
-}
-
-// Обновление статуса (вспомогательная функция)
-function updateStatus(message, type = 'info') {
-    console.log(`${type}: ${message}`);
-    // Здесь можно добавить обновление UI статуса
 }
