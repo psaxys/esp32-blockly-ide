@@ -1,5 +1,5 @@
-// ПОЛНАЯ КОНФИГУРАЦИЯ BLOCKLY ДЛЯ ESP32 (V3.0)
-// Включает: ОСНОВНЫЕ, Логику, Циклы, I/O, Дисплеи, Прерывания, Массивы, Функции.
+// ПОЛНАЯ КОНФИГУРАЦИЯ BLOCKLY ДЛЯ ESP32
+// Включает: ОСНОВНЫЕ, ЛОГИКА, ЦИКЛЫ, МАТЕМАТИКА, ТЕКСТ, ВРЕМЯ, ПРЕРЫВАНИЯ, ПЕРЕМЕННЫЕ, МАССИВЫ, ФУНКЦИИ, I/O, SERIAL, LCD, OLED
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.workspace) return; 
@@ -8,16 +8,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!blocklyDiv) return;
 
     // =================================================================
-    // 1. ОПРЕДЕЛЕНИЕ ВИЗУАЛЬНЫХ БЛОКОВ (JSON) - СОХРАНЕНЫ ВСЕ + НОВЫЕ
+    // 1. ОПРЕДЕЛЕНИЕ ВСЕХ ВИЗУАЛЬНЫХ БЛОКОВ (JSON)
     // =================================================================
     Blockly.defineBlocksWithJsonArray([
-        // --- НОВЫЙ БЛОК: СТРУКТУРА (ОСНОВНЫЕ) ---
+        // --- ОСНОВНЫЕ (СТАРТ/ЦИКЛ) ---
         {
             "type": "esp32_main_skeleton",
             "message0": "ГЛАВНЫЙ БЛОК ESP32 %1 НАСТРОЙКА (Setup): %2 %3 ЦИКЛ (Loop): %4 %5",
-            "args0": [{ "type": "input_dummy" }, { "type": "input_dummy" }, { "type": "input_statement", "name": "SETUP" }, { "type": "input_dummy" }, { "type": "input_statement", "name": "LOOP" }],
+            "args0": [
+                { "type": "input_dummy" },
+                { "type": "input_dummy" },
+                { "type": "input_statement", "name": "SETUP" },
+                { "type": "input_dummy" },
+                { "type": "input_statement", "name": "LOOP" }
+            ],
             "colour": 260,
-            "tooltip": "Базовая структура программы: блоки внутри Setup выполнятся один раз, блоки внутри Loop — бесконечно."
+            "tooltip": "Setup выполняется один раз при старте, Loop — бесконечно."
         },
 
         // --- ВРЕМЯ ---
@@ -25,14 +31,15 @@ document.addEventListener('DOMContentLoaded', function() {
             "type": "esp32_delay",
             "message0": "ждать %1 мс",
             "args0": [{ "type": "input_value", "name": "MS", "check": "Number" }],
-            "previousStatement": null, "nextStatement": null, "colour": 65,
-            "tooltip": "Задержка выполнения (delay)"
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 65
         },
         {
             "type": "esp32_millis",
             "message0": "время с старта (мс)",
-            "output": "Number", "colour": 65,
-            "tooltip": "Возвращает millis()"
+            "output": "Number",
+            "colour": 65
         },
 
         // --- ВХОДЫ / ВЫХОДЫ (GPIO) ---
@@ -43,7 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 { "type": "field_number", "name": "PIN", "value": 2, "min": 0, "max": 39 },
                 { "type": "field_dropdown", "name": "MODE", "options": [["ВЫХОД (OUTPUT)", "OUTPUT"], ["ВХОД (INPUT)", "INPUT"], ["ВХОД С ПОДТЯЖКОЙ", "INPUT_PULLUP"]] }
             ],
-            "previousStatement": null, "nextStatement": null, "colour": 160
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 160
         },
         {
             "type": "esp32_digital_write",
@@ -52,19 +61,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 { "type": "field_number", "name": "PIN", "value": 2 },
                 { "type": "field_dropdown", "name": "STATE", "options": [["HIGH", "HIGH"], ["LOW", "LOW"]] }
             ],
-            "previousStatement": null, "nextStatement": null, "colour": 160
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 160
         },
         {
             "type": "esp32_digital_read",
             "message0": "читать цифровой пин %1",
             "args0": [{ "type": "field_number", "name": "PIN", "value": 0 }],
-            "output": "Number", "colour": 160
+            "output": "Number",
+            "colour": 160
         },
         {
             "type": "esp32_analog_read",
             "message0": "читать аналоговый пин %1",
             "args0": [{ "type": "field_number", "name": "PIN", "value": 34 }],
-            "output": "Number", "colour": 160
+            "output": "Number",
+            "colour": 160
         },
         {
             "type": "esp32_pwm_write",
@@ -73,26 +86,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 { "type": "field_number", "name": "PIN", "value": 2 },
                 { "type": "input_value", "name": "VAL", "check": "Number" }
             ],
-            "previousStatement": null, "nextStatement": null, "colour": 160
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 160
         },
 
-        // --- МОНИТОР ПОРТА (SERIAL) ---
+        // --- МОНИТОР ПОРТА ---
         {
             "type": "esp32_serial_init",
             "message0": "Serial скорость %1",
             "args0": [{ "type": "field_number", "name": "BAUD", "value": 115200 }],
-            "previousStatement": null, "nextStatement": null, "colour": 20
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 20
         },
         {
             "type": "esp32_serial_print",
             "message0": "Serial печать %1 (новая строка: %2)",
-            "args0": [{ "type": "input_value", "name": "MSG" }, { "type": "field_checkbox", "name": "NL", "checked": true }],
-            "previousStatement": null, "nextStatement": null, "colour": 20
+            "args0": [
+                { "type": "input_value", "name": "MSG" },
+                { "type": "field_checkbox", "name": "NL", "checked": true }
+            ],
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 20
         },
         {
             "type": "esp32_serial_available",
             "message0": "Serial данные доступны?",
-            "output": "Boolean", "colour": 20
+            "output": "Boolean",
+            "colour": 20
         },
 
         // --- ПРЕРЫВАНИЯ ---
@@ -102,56 +125,86 @@ document.addEventListener('DOMContentLoaded', function() {
             "args0": [
                 { "type": "field_number", "name": "PIN", "value": 0 },
                 { "type": "field_dropdown", "name": "MODE", "options": [["CHANGE", "CHANGE"], ["RISING", "RISING"], ["FALLING", "FALLING"]] },
-                { "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }
+                { "type": "input_dummy" },
+                { "type": "input_statement", "name": "DO" }
             ],
-            "previousStatement": null, "nextStatement": null, "colour": 290
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 290
         },
 
         // --- LCD ДИСПЛЕЙ ---
         {
             "type": "lcd_i2c_init",
             "message0": "LCD I2C иниц. адрес 0x%1 колог %2 строк %3",
-            "args0": [{ "type": "field_input", "name": "ADDR", "text": "27" }, { "type": "field_number", "name": "COLS", "value": 16 }, { "type": "field_number", "name": "ROWS", "value": 2 }],
-            "previousStatement": null, "nextStatement": null, "colour": 190
+            "args0": [
+                { "type": "field_input", "name": "ADDR", "text": "27" },
+                { "type": "field_number", "name": "COLS", "value": 16 },
+                { "type": "field_number", "name": "ROWS", "value": 2 }
+            ],
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 190
         },
         {
             "type": "lcd_i2c_print",
-            "message0": "LCD печать %1 на стр %2 поз %3",
-            "args0": [{ "type": "input_value", "name": "TEXT" }, { "type": "field_number", "name": "ROW", "value": 0 }, { "type": "field_number", "name": "COL", "value": 0 }],
-            "previousStatement": null, "nextStatement": null, "colour": 190
+            "message0": "LCD печать %1 ряд %2 поз %3",
+            "args0": [
+                { "type": "input_value", "name": "TEXT" },
+                { "type": "field_number", "name": "ROW", "value": 0 },
+                { "type": "field_number", "name": "COL", "value": 0 }
+            ],
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 190
         },
         {
             "type": "lcd_i2c_clear",
             "message0": "LCD очистить",
-            "previousStatement": null, "nextStatement": null, "colour": 190
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 190
         },
 
         // --- OLED ДИСПЛЕЙ ---
         {
             "type": "oled_init",
             "message0": "OLED иниц. (128x64 I2C)",
-            "previousStatement": null, "nextStatement": null, "colour": 180
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 180
         },
         {
             "type": "oled_print",
-            "message0": "OLED текст %1 размер %2 x %3 y %4",
-            "args0": [{ "type": "input_value", "name": "TEXT" }, { "type": "field_number", "name": "SIZE", "value": 1 }, { "type": "field_number", "name": "X", "value": 0 }, { "type": "field_number", "name": "Y", "value": 0 }],
-            "previousStatement": null, "nextStatement": null, "colour": 180
+            "message0": "OLED текст %1 разм %2 x %3 y %4",
+            "args0": [
+                { "type": "input_value", "name": "TEXT" },
+                { "type": "field_number", "name": "SIZE", "value": 1 },
+                { "type": "field_number", "name": "X", "value": 0 },
+                { "type": "field_number", "name": "Y", "value": 0 }
+            ],
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 180
         },
         {
             "type": "oled_display",
-            "message0": "OLED обновить экран",
-            "previousStatement": null, "nextStatement": null, "colour": 180
+            "message0": "OLED обновить",
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 180
         },
         {
             "type": "oled_clear",
             "message0": "OLED очистить",
-            "previousStatement": null, "nextStatement": null, "colour": 180
+            "previousStatement": null,
+            "nextStatement": null,
+            "colour": 180
         }
     ]);
 
     // =================================================================
-    // 2. ГЕНЕРАТОР ARDUINO C++
+    // 2. ГЕНЕРАТОР ARDUINO (C++)
     // =================================================================
     Blockly.Arduino = new Blockly.Generator('Arduino');
     Blockly.Arduino.ORDER_ATOMIC = 0;
@@ -167,11 +220,12 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             Blockly.Arduino.nameDB_.reset();
         }
+        
+        // Исправлено для версии v12+: используем getVariableMap()
         Blockly.Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
 
-        // Глобальные переменные
         const defvars = [];
-        const variables = workspace.getAllVariables();
+        const variables = workspace.getVariableMap().getAllVariables();
         for (let i = 0; i < variables.length; i++) {
             const varName = Blockly.Arduino.nameDB_.getName(variables[i].getId(), Blockly.Variables.NAME_TYPE);
             defvars.push(`float ${varName} = 0;`); 
@@ -187,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return code + nextCode;
     };
 
-    // ГЕНЕРАТОРЫ ДЛЯ ESP32
+    // --- ГЕНЕРАТОРЫ ДЛЯ ESP32 ---
     Blockly.Arduino.forBlock['esp32_main_skeleton'] = function(block, generator) {
         const setupCode = generator.statementToCode(block, 'SETUP');
         const loopCode = generator.statementToCode(block, 'LOOP');
@@ -195,9 +249,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return loopCode;
     };
 
-    Blockly.Arduino.forBlock['esp32_pin_mode'] = function(block) {
-        Blockly.Arduino.setups_['pin_mode_' + block.getFieldValue('PIN')] = `pinMode(${block.getFieldValue('PIN')}, ${block.getFieldValue('MODE')});`;
-        return '';
+    Blockly.Arduino.forBlock['esp32_delay'] = function(block, generator) {
+        const ms = generator.valueToCode(block, 'MS', Blockly.Arduino.ORDER_NONE) || '0';
+        return `delay(${ms});\n`;
     };
 
     Blockly.Arduino.forBlock['esp32_digital_write'] = function(block) {
@@ -208,8 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return [`digitalRead(${block.getFieldValue('PIN')})`, Blockly.Arduino.ORDER_ATOMIC];
     };
 
-    Blockly.Arduino.forBlock['esp32_delay'] = function(block, generator) {
-        return `delay(${generator.valueToCode(block, 'MS', Blockly.Arduino.ORDER_NONE) || '0'});\n`;
+    Blockly.Arduino.forBlock['esp32_analog_read'] = function(block) {
+        return [`analogRead(${block.getFieldValue('PIN')})`, Blockly.Arduino.ORDER_ATOMIC];
     };
 
     Blockly.Arduino.forBlock['esp32_serial_print'] = function(block, generator) {
@@ -217,23 +271,36 @@ document.addEventListener('DOMContentLoaded', function() {
         return `Serial.${block.getFieldValue('NL') === 'TRUE' ? 'println' : 'print'}(${msg});\n`;
     };
 
-    // Копирование логики из JS для стандартных блоков
-    if (Blockly.JavaScript) {
-        const std = ['controls_if', 'controls_repeat_ext', 'logic_compare', 'logic_operation', 'math_number', 'math_arithmetic', 'text', 'variables_get', 'variables_set', 'lists_create_with'];
-        std.forEach(type => {
-            Blockly.Arduino.forBlock[type] = function(block, generator) {
-                return Blockly.JavaScript.forBlock[type](block, generator);
-            };
-        });
-    }
+    // Исправление ошибки math_change
+    Blockly.Arduino.forBlock['math_change'] = function(block, generator) {
+        const delta = generator.valueToCode(block, 'DELTA', Blockly.Arduino.ORDER_NONE) || '0';
+        const varName = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+        return varName + ' += ' + delta + ';\n';
+    };
 
-    // (Здесь можно добавить остальные генераторы для OLED/LCD/Interrupts по аналогии с твоим исходником)
-    // ...
+    // Генератор Массивов
+    Blockly.Arduino.forBlock['lists_create_with'] = function(block, generator) {
+        const elements = new Array(block.itemCount_);
+        for (let i = 0; i < block.itemCount_; i++) {
+            elements[i] = generator.valueToCode(block, 'ADD' + i, Blockly.Arduino.ORDER_NONE) || '0';
+        }
+        return ['{' + elements.join(', ') + '}', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    // Привязка стандартных блоков
+    const stdBlocks = ['controls_if', 'controls_repeat_ext', 'controls_whileUntil', 'logic_compare', 'logic_operation', 'math_number', 'math_arithmetic', 'variables_get', 'variables_set', 'text', 'text_join', 'procedures_defnoreturn', 'procedures_defreturn', 'procedures_callnoreturn', 'procedures_callreturn'];
+    stdBlocks.forEach(type => {
+        Blockly.Arduino.forBlock[type] = function(block, generator) {
+            if (Blockly.JavaScript && Blockly.JavaScript.forBlock[type]) {
+                return Blockly.JavaScript.forBlock[type](block, generator);
+            }
+            return ''; 
+        };
+    });
 
     // =================================================================
     // 3. ИНИЦИАЛИЗАЦИЯ И СОХРАНЕНИЕ
     // =================================================================
-    
     window.workspace = Blockly.inject(blocklyDiv, {
         toolbox: getToolboxConfig(),
         media: 'https://unpkg.com/blockly/media/',
@@ -243,21 +310,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Авто-загрузка
-    const saved = localStorage.getItem('blockly_workspace_persistent');
+    const saved = localStorage.getItem('esp32_persistent_v3');
     if (saved) {
-        try { Blockly.serialization.workspaces.load(JSON.parse(saved), window.workspace); } catch(e) {}
+        try { Blockly.serialization.workspaces.load(JSON.parse(saved), window.workspace); } catch(e) { console.error(e); }
     }
 
-    // Авто-сохранение
+    // Авто-сохранение и генерация
     window.workspace.addChangeListener((e) => {
         if (e.isUiEvent) return;
-        localStorage.setItem('blockly_workspace_persistent', JSON.stringify(Blockly.serialization.workspaces.save(window.workspace)));
+        localStorage.setItem('esp32_persistent_v3', JSON.stringify(Blockly.serialization.workspaces.save(window.workspace)));
         generateFullCode();
     });
 });
 
 // =================================================================
-// 4. ТУЛБОКС (МЕНЮ) - ВСЕ КАТЕГОРИИ НА МЕСТЕ
+// 4. ТУЛБОКС (ВСЕ КАТЕГОРИИ)
 // =================================================================
 function getToolboxConfig() {
     return {
@@ -290,15 +357,15 @@ function getToolboxConfig() {
                 'kind': 'category', 'name': 'Математика', 'colour': '230',
                 'contents': [
                     { 'kind': 'block', 'type': 'math_number' },
-                    { 'kind': 'block', 'type': 'math_arithmetic' }
+                    { 'kind': 'block', 'type': 'math_arithmetic' },
+                    { 'kind': 'block', 'type': 'math_change' }
                 ]
             },
+            { 'kind': 'category', 'name': 'Текст', 'colour': '160', 'contents': [{ 'kind': 'block', 'type': 'text' }, { 'kind': 'block', 'type': 'text_join' }] },
             { 'kind': 'category', 'name': 'Переменные', 'custom': 'VARIABLE', 'colour': '330' },
             {
                 'kind': 'category', 'name': 'Массивы', 'colour': '260',
-                'contents': [
-                    { 'kind': 'block', 'type': 'lists_create_with' }
-                ]
+                'contents': [{ 'kind': 'block', 'type': 'lists_create_with' }]
             },
             { 'kind': 'category', 'name': 'Функции', 'custom': 'PROCEDURE', 'colour': '290' },
             { 'kind': 'sep' },
@@ -310,6 +377,20 @@ function getToolboxConfig() {
                     { 'kind': 'block', 'type': 'esp32_digital_read' },
                     { 'kind': 'block', 'type': 'esp32_pwm_write' },
                     { 'kind': 'block', 'type': 'esp32_analog_read' }
+                ]
+            },
+            {
+                'kind': 'category', 'name': 'Монитор порта', 'colour': '20',
+                'contents': [
+                    { 'kind': 'block', 'type': 'esp32_serial_init' },
+                    { 'kind': 'block', 'type': 'esp32_serial_print' },
+                    { 'kind': 'block', 'type': 'esp32_serial_available' }
+                ]
+            },
+            {
+                'kind': 'category', 'name': 'Прерывания', 'colour': '290',
+                'contents': [
+                    { 'kind': 'block', 'type': 'esp32_interrupt' }
                 ]
             },
             {
@@ -328,12 +409,6 @@ function getToolboxConfig() {
                     { 'kind': 'block', 'type': 'oled_display' },
                     { 'kind': 'block', 'type': 'oled_clear' }
                 ]
-            },
-            {
-                'kind': 'category', 'name': 'Прерывания', 'colour': '290',
-                'contents': [
-                    { 'kind': 'block', 'type': 'esp32_interrupt' }
-                ]
             }
         ]
     };
@@ -347,7 +422,7 @@ function generateFullCode() {
         const defs = Object.values(Blockly.Arduino.definitions_ || {}).join('\n');
         const setups = Object.values(Blockly.Arduino.setups_ || {}).join('\n  ');
 
-        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  Serial.begin(115200);\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
+        const fullCode = `#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  Serial.begin(115200);\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
         if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Ошибка генерации:", e); }
 }
