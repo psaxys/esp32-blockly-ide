@@ -378,4 +378,81 @@ void setup() {
     ${setups}
 }
 
-void loop
+void loop() {
+${loopCode}
+    delay(10); // Пауза для стабильности
+}
+`;
+        if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
+        return fullCode;
+    } catch (e) {
+        console.error(e);
+        return "// Ошибка: " + e.message;
+    }
+}
+
+function getToolboxConfig() {
+    return {
+        'kind': 'categoryToolbox',
+        'contents': [
+            {
+                'kind': 'category',
+                'name': 'Ввод/Вывод',
+                'colour': '160',
+                'contents': [
+                    { 'kind': 'block', 'type': 'esp32_pin_mode' },
+                    { 'kind': 'block', 'type': 'esp32_digital_write' },
+                    { 'kind': 'block', 'type': 'esp32_digital_read' },
+                    { 'kind': 'block', 'type': 'esp32_analog_read' },
+                    { 'kind': 'block', 'type': 'esp32_pwm_write' }
+                ]
+            },
+            {
+                'kind': 'category',
+                'name': 'Модули',
+                'colour': '230',
+                'contents': [
+                    { 'kind': 'block', 'type': 'esp32_servo_write' },
+                    { 'kind': 'block', 'type': 'esp32_ultrasonic' },
+                    { 'kind': 'block', 'type': 'esp32_dht_read' }
+                ]
+            },
+            {
+                'kind': 'category',
+                'name': 'Логика и Время',
+                'colour': '210',
+                'contents': [
+                    { 'kind': 'block', 'type': 'controls_if' },
+                    { 'kind': 'block', 'type': 'logic_compare' },
+                    { 'kind': 'block', 'type': 'controls_whileUntil' },
+                    { 'kind': 'block', 'type': 'esp32_delay' },
+                    { 'kind': 'block', 'type': 'esp32_millis' },
+                    { 'kind': 'block', 'type': 'esp32_random' },
+                    { 'kind': 'block', 'type': 'esp32_map' }
+                ]
+            },
+            {
+                'kind': 'category',
+                'name': 'Serial',
+                'colour': '20',
+                'contents': [
+                    { 'kind': 'block', 'type': 'esp32_serial_print' }
+                ]
+            },
+            {
+                'kind': 'category',
+                'name': 'Переменные',
+                'custom': 'VARIABLE',
+                'colour': '330'
+            },
+            {
+                'kind': 'category',
+                'name': 'Числа',
+                'colour': '230',
+                'contents': [
+                    { 'kind': 'block', 'type': 'math_number' }
+                ]
+            }
+        ]
+    };
+}
