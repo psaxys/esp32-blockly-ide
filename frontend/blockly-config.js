@@ -214,7 +214,7 @@ function generateFullCode() {
         const defs = Object.values(Blockly.Arduino.definitions_ || {}).join('\n');
         const setups = Object.values(Blockly.Arduino.setups_ || {}).join('\n  ');
 
-        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  Serial.begin(115200);\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
+        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
         if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
         return fullCode;
     } catch (e) { return "// Ошибка: " + e.message; }
