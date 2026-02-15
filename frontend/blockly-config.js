@@ -11,22 +11,52 @@ document.addEventListener('DOMContentLoaded', function() {
     Blockly.defineBlocksWithJsonArray([
         { "type": "esp32_delay", "message0": "ждать %1 мс", "args0": [{ "type": "input_value", "name": "MS", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 65 },
         { "type": "esp32_millis", "message0": "время с старта (мс)", "output": "Number", "colour": 65 },
+        { "type": "esp32_micros", "message0": "время с старта (мкс)", "output": "Number", "colour": 65 },
+        { "type": "esp32_delaymicroseconds", "message0": "ждать %1 мкс", "args0": [{ "type": "input_value", "name": "US", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 65 },
         { "type": "esp32_pin_mode", "message0": "настроить пин %1 как %2", "args0": [{ "type": "field_number", "name": "PIN", "value": 2, "min": 0, "max": 39 }, { "type": "field_dropdown", "name": "MODE", "options": [["ВЫХОД (OUTPUT)", "OUTPUT"], ["ВХОД (INPUT)", "INPUT"], ["ВХОД С ПОДТЯЖКОЙ", "INPUT_PULLUP"]] }], "previousStatement": null, "nextStatement": null, "colour": 160 },
         { "type": "esp32_digital_write", "message0": "цифровой пин %1 установить %2", "args0": [{ "type": "field_number", "name": "PIN", "value": 2 }, { "type": "field_dropdown", "name": "STATE", "options": [["HIGH", "HIGH"], ["LOW", "LOW"]] }], "previousStatement": null, "nextStatement": null, "colour": 160 },
         { "type": "esp32_digital_read", "message0": "читать цифровой пин %1", "args0": [{ "type": "field_number", "name": "PIN", "value": 0 }], "output": "Number", "colour": 160 },
         { "type": "esp32_analog_read", "message0": "читать аналоговый пин %1", "args0": [{ "type": "field_number", "name": "PIN", "value": 34 }], "output": "Number", "colour": 160 },
         { "type": "esp32_pwm_write", "message0": "ШИМ (Analog) пин %1 знач %2", "args0": [{ "type": "field_number", "name": "PIN", "value": 2 }, { "type": "input_value", "name": "VAL", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 160 },
+        { "type": "esp32_pwm_freq", "message0": "ШИМ частота %1 Гц канал %2", "args0": [{ "type": "input_value", "name": "FREQ", "check": "Number" }, { "type": "field_number", "name": "CHANNEL", "value": 0, "min": 0, "max": 15 }], "previousStatement": null, "nextStatement": null, "colour": 160 },
+        { "type": "esp32_adc_width", "message0": "разрядность ADC %1", "args0": [{ "type": "field_dropdown", "name": "WIDTH", "options": [["9 бит", "9"], ["10 бит", "10"], ["11 бит", "11"], ["12 бит", "12"]] }], "previousStatement": null, "nextStatement": null, "colour": 160 },
         { "type": "esp32_serial_init", "message0": "Serial скорость %1", "args0": [{ "type": "field_number", "name": "BAUD", "value": 115200 }], "previousStatement": null, "nextStatement": null, "colour": 20 },
         { "type": "esp32_serial_print", "message0": "Serial печать %1 (новая строка: %2)", "args0": [{ "type": "input_value", "name": "MSG" }, { "type": "field_checkbox", "name": "NL", "checked": true }], "previousStatement": null, "nextStatement": null, "colour": 20 },
+        { "type": "esp32_serial_println", "message0": "Serial println %1", "args0": [{ "type": "input_value", "name": "MSG" }], "previousStatement": null, "nextStatement": null, "colour": 20 },
         { "type": "esp32_serial_available", "message0": "Serial данные доступны?", "output": "Boolean", "colour": 20 },
+        { "type": "esp32_serial_read", "message0": "Serial чтение", "output": "Number", "colour": 20 },
+        { "type": "esp32_serial_peek", "message0": "Serial peek", "output": "Number", "colour": 20 },
+        { "type": "esp32_serial_flush", "message0": "Serial flush", "previousStatement": null, "nextStatement": null, "colour": 20 },
         { "type": "esp32_interrupt", "message0": "Прерывание на пине %1 режим %2 %3 выполнять %4", "args0": [{ "type": "field_number", "name": "PIN", "value": 0 }, { "type": "field_dropdown", "name": "MODE", "options": [["ИЗМЕНЕНИЕ (CHANGE)", "CHANGE"], ["РОСТ (RISING)", "RISING"], ["СПАД (FALLING)", "FALLING"]] }, { "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "previousStatement": null, "nextStatement": null, "colour": 290 },
+        { "type": "esp32_detach_interrupt", "message0": "отключить прерывание пин %1", "args0": [{ "type": "field_number", "name": "PIN", "value": 0 }], "previousStatement": null, "nextStatement": null, "colour": 290 },
         { "type": "lcd_i2c_init", "message0": "LCD I2C иниц. адрес 0x%1 колог %2 строк %3", "args0": [{ "type": "field_input", "name": "ADDR", "text": "27" }, { "type": "field_number", "name": "COLS", "value": 16 }, { "type": "field_number", "name": "ROWS", "value": 2 }], "previousStatement": null, "nextStatement": null, "colour": 190 },
         { "type": "lcd_i2c_print", "message0": "LCD печать %1 на стр %2 поз %3", "args0": [{ "type": "input_value", "name": "TEXT" }, { "type": "field_number", "name": "ROW", "value": 0 }, { "type": "field_number", "name": "COL", "value": 0 }], "previousStatement": null, "nextStatement": null, "colour": 190 },
         { "type": "lcd_i2c_clear", "message0": "LCD очистить", "previousStatement": null, "nextStatement": null, "colour": 190 },
+        { "type": "lcd_i2c_cursor", "message0": "LCD курсор (стр %1, кол %2)", "args0": [{ "type": "field_number", "name": "ROW", "value": 0 }, { "type": "field_number", "name": "COL", "value": 0 }], "previousStatement": null, "nextStatement": null, "colour": 190 },
+        { "type": "lcd_i2c_backlight", "message0": "LCD подсветка %1", "args0": [{ "type": "field_dropdown", "name": "STATE", "options": [["ВКЛ", "ON"], ["ВЫКЛ", "OFF"]] }], "previousStatement": null, "nextStatement": null, "colour": 190 },
         { "type": "oled_init", "message0": "OLED иниц. (128x64 I2C)", "previousStatement": null, "nextStatement": null, "colour": 180 },
         { "type": "oled_print", "message0": "OLED текст %1 размер %2 x %3 y %4", "args0": [{ "type": "input_value", "name": "TEXT" }, { "type": "field_number", "name": "SIZE", "value": 1 }, { "type": "field_number", "name": "X", "value": 0 }, { "type": "field_number", "name": "Y", "value": 0 }], "previousStatement": null, "nextStatement": null, "colour": 180 },
         { "type": "oled_display", "message0": "OLED обновить экран", "previousStatement": null, "nextStatement": null, "colour": 180 },
-        { "type": "oled_clear", "message0": "OLED очистить", "previousStatement": null, "nextStatement": null, "colour": 180 }
+        { "type": "oled_clear", "message0": "OLED очистить", "previousStatement": null, "nextStatement": null, "colour": 180 },
+        { "type": "oled_pixel", "message0": "OLED точка (x %1, y %2) %3", "args0": [{ "type": "field_number", "name": "X", "value": 0 }, { "type": "field_number", "name": "Y", "value": 0 }, { "type": "field_dropdown", "name": "COLOR", "options": [["ЧЕРНЫЙ", "BLACK"], ["БЕЛЫЙ", "WHITE"]] }], "previousStatement": null, "nextStatement": null, "colour": 180 },
+        { "type": "oled_line", "message0": "OLED линия (x1 %1, y1 %2) - (x2 %3, y2 %4) %5", "args0": [{ "type": "field_number", "name": "X1", "value": 0 }, { "type": "field_number", "name": "Y1", "value": 0 }, { "type": "field_number", "name": "X2", "value": 10 }, { "type": "field_number", "name": "Y2", "value": 10 }, { "type": "field_dropdown", "name": "COLOR", "options": [["ЧЕРНЫЙ", "BLACK"], ["БЕЛЫЙ", "WHITE"]] }], "previousStatement": null, "nextStatement": null, "colour": 180 },
+        { "type": "oled_rect", "message0": "OLED прямоугольник (x %1, y %2, w %3, h %4) %5", "args0": [{ "type": "field_number", "name": "X", "value": 0 }, { "type": "field_number", "name": "Y", "value": 0 }, { "type": "field_number", "name": "W", "value": 20 }, { "type": "field_number", "name": "H", "value": 15 }, { "type": "field_dropdown", "name": "COLOR", "options": [["ЧЕРНЫЙ", "BLACK"], ["БЕЛЫЙ", "WHITE"]] }], "previousStatement": null, "nextStatement": null, "colour": 180 },
+        { "type": "servo_attach", "message0": "серво пин %1", "args0": [{ "type": "field_number", "name": "PIN", "value": 2 }], "output": "Number", "colour": 260 },
+        { "type": "servo_write", "message0": "серво %1 угол %2", "args0": [{ "type": "input_value", "name": "SERVO", "check": "Number" }, { "type": "field_number", "name": "ANGLE", "value": 90, "min": 0, "max": 180 }], "previousStatement": null, "nextStatement": null, "colour": 260 },
+        { "type": "servo_read", "message0": "угол серво %1", "args0": [{ "type": "input_value", "name": "SERVO", "check": "Number" }], "output": "Number", "colour": 260 },
+        { "type": "stepper_init", "message0": "шаговик пины IN1:%1 IN2:%2 IN3:%3 IN4:%4", "args0": [{ "type": "field_number", "name": "IN1", "value": 8 }, { "type": "field_number", "name": "IN2", "value": 9 }, { "type": "field_number", "name": "IN3", "value": 10 }, { "type": "field_number", "name": "IN4", "value": 11 }], "output": "Number", "colour": 240 },
+        { "type": "stepper_step", "message0": "шаговик %1 шагов %2", "args0": [{ "type": "input_value", "name": "STEPPER", "check": "Number" }, { "type": "field_number", "name": "STEPS", "value": 10 }], "previousStatement": null, "nextStatement": null, "colour": 240 },
+        { "type": "dht_sensor", "message0": "DHT датчик пин %1 тип %2", "args0": [{ "type": "field_number", "name": "PIN", "value": 4 }, { "type": "field_dropdown", "name": "TYPE", "options": [["DHT11", "DHT11"], ["DHT22", "DHT22"]] }], "output": "Array", "colour": 200 },
+        { "type": "ds18b20_init", "message0": "DS18B20 иниц. пин %1", "args0": [{ "type": "field_number", "name": "PIN", "value": 4 }], "previousStatement": null, "nextStatement": null, "colour": 200 },
+        { "type": "ds18b20_request", "message0": "DS18B20 запрос температуры", "previousStatement": null, "nextStatement": null, "colour": 200 },
+        { "type": "ds18b20_read", "message0": "DS18B20 температура", "output": "Number", "colour": 200 },
+        { "type": "wifi_connect", "message0": "WiFi подкл. SSID %1 пароль %2", "args0": [{ "type": "field_input", "name": "SSID", "text": "myNetwork" }, { "type": "field_input", "name": "PASSWORD", "text": "myPassword" }], "previousStatement": null, "nextStatement": null, "colour": 225 },
+        { "type": "wifi_status", "message0": "WiFi статус", "output": "Boolean", "colour": 225 },
+        { "type": "wifi_ip", "message0": "WiFi IP адрес", "output": "String", "colour": 225 },
+        { "type": "http_request", "message0": "HTTP запрос %1 URL %2", "args0": [{ "type": "field_dropdown", "name": "METHOD", "options": [["GET", "GET"], ["POST", "POST"]] }, { "type": "field_input", "name": "URL", "text": "http://example.com" }], "output": "String", "colour": 225 },
+        { "type": "mqtt_init", "message0": "MQTT иниц. сервер %1 порт %2", "args0": [{ "type": "field_input", "name": "SERVER", "text": "broker.hivemq.com" }, { "type": "field_number", "name": "PORT", "value": 1883 }], "previousStatement": null, "nextStatement": null, "colour": 225 },
+        { "type": "mqtt_publish", "message0": "MQTT публ. топик %1 сообщение %2", "args0": [{ "type": "field_input", "name": "TOPIC", "text": "topic" }, { "type": "input_value", "name": "MESSAGE" }], "previousStatement": null, "nextStatement": null, "colour": 225 },
+        { "type": "mqtt_subscribe", "message0": "MQTT подписка топик %1", "args0": [{ "type": "field_input", "name": "TOPIC", "text": "topic" }], "previousStatement": null, "nextStatement": null, "colour": 225 }
     ]);
 
     // 2. НАСТРОЙКА ГЕНЕРАТОРА (Arduino C++)
@@ -191,7 +221,39 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Экспорт функций для HTML-кнопок
     window.generateCode = generateFullCode;
-    window.compileProject = function() { alert("Код готов для компиляции!"); };
+    
+    // Функция компиляции проекта
+    window.compileProject = async function() {
+        try {
+            const code = generateFullCode();
+            
+            // Отправляем код на сервер для компиляции
+            const response = await fetch('/api/compile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка компиляции: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('Компиляция успешна:', result.message);
+                alert(result.message);
+            } else {
+                console.error('Ошибка компиляции:', result.error);
+                alert(`Ошибка компиляции: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Ошибка при компиляции:', error);
+            alert(`Ошибка: ${error.message}`);
+        }
+    };
 });
 
 function saveState() {
