@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
 
         const defvars = [];
-        const variables = workspace.getVariableMap().getAllVariables(); 
+        const variables = workspace.getVariableMap().getAllVariables ? workspace.getVariableMap().getAllVariables() : workspace.getAllVariables(); 
         for (let i = 0; i < variables.length; i++) {
             const varName = Blockly.Arduino.nameDB_.getName(variables[i].getId(), Blockly.Variables.NAME_TYPE);
             defvars.push(`float ${varName} = 0;`); 
