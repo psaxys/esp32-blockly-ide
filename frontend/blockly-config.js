@@ -68,6 +68,18 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.definitions_ = Object.create(null);
         Blockly.Arduino.setups_ = Object.create(null);
         Blockly.Arduino.libraries_ = Object.create(null);
+        Blockly.Arduino.context_ = {
+            servos: {},
+            steppers: {},
+            dht: {},
+            ds18b20: {},
+            counters: {
+                servo: 0,
+                stepper: 0,
+                dht: 0,
+                ds18b20: 0
+            }
+        };
         
         if (!Blockly.Arduino.nameDB_) {
             Blockly.Arduino.nameDB_ = new Blockly.Names(Blockly.Arduino.RESERVED_WORDS_);
@@ -78,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
 
         const defvars = [];
-        const variables = workspace.getVariableMap().getAllVariables ? workspace.getVariableMap().getAllVariables() : workspace.getAllVariables(); 
+        const variables = workspace.getVariableMap().getAllVariables();
         for (let i = 0; i < variables.length; i++) {
             const varName = Blockly.Arduino.nameDB_.getName(variables[i].getId(), Blockly.Variables.NAME_TYPE);
             defvars.push(`float ${varName} = 0;`); 
@@ -92,34 +104,184 @@ document.addEventListener('DOMContentLoaded', function() {
         return code + nextCode;
     };
 
-    // --- ПОЛНАЯ ПОДДЕРЖКА СТАНДАРТНЫХ БЛОКОВ (ВКЛЮЧАЯ СТРОКИ) ---
-    const standardBlocks = [
-        'controls_if', 'controls_repeat_ext', 'controls_whileUntil', 'controls_for',
-        'logic_compare', 'logic_operation', 'logic_negate', 'logic_boolean', 'logic_null', 'logic_ternary',
-        'math_number', 'math_arithmetic', 'math_single', 'math_trig', 'math_constant', 'math_number_property', 'math_round', 'math_modulo', 'math_constrain', 'math_random_int',
-        'text', 'text_join', 'text_length', 'text_isEmpty',
-        'variables_get', 'variables_set',
-        'procedures_defreturn', 'procedures_defnoreturn', 'procedures_callreturn', 'procedures_callnoreturn',
-        'lists_create_with'
-    ];
-    
-    standardBlocks.forEach(type => {
-        Blockly.Arduino.forBlock[type] = function(block, generator) {
-            // Прямая привязка к логике JavaScript генератора для корректного вывода синтаксиса
-            if (Blockly.JavaScript && Blockly.JavaScript.forBlock[type]) {
-                let code = Blockly.JavaScript.forBlock[type](block, generator);
-                
-                // Специфическая обработка для текстовых блоков в контексте Arduino (String)
-                if (type === 'text') {
-                    return [`String(${code[0]})`, Blockly.Arduino.ORDER_ATOMIC];
-                }
-                return code;
-            }
-            return ''; 
-        };
-    });
+    const normalizeKey = (value) => String(value).replace(/[^a-zA-Z0-9_]/g, '_');
 
-    // 3. ГЕНЕРАТОРЫ ESP32 (ИЗ ВАШЕГО ИСХОДНИКА)
+    const ensureMqttHelpers = () => {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        Blockly.Arduino.libraries_['mqtt'] = '#include <PubSubClient.h>';
+        Blockly.Arduino.definitions_['mqtt_wifi_client'] = 'WiFiClient esp32MqttNetClient;';
+        Blockly.Arduino.definitions_['mqtt_client'] = 'PubSubClient mqttClient(esp32MqttNetClient);';
+        Blockly.Arduino.definitions_['mqtt_reconnect'] = `void ensureMqttConnection() {
+  while (!mqttClient.connected()) {
+    String clientId = "esp32-blockly-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    if (mqttClient.connect(clientId.c_str())) {
+      break;
+    }
+    delay(1000);
+  }
+}`;
+    };
+
+    const ensureDs18b20 = (pin) => {
+        const key = String(pin);
+        const ctx = Blockly.Arduino.context_;
+        if (ctx.ds18b20[key] === undefined) {
+            const idx = ctx.counters.ds18b20++;
+            ctx.ds18b20[key] = idx;
+            Blockly.Arduino.libraries_['onewire'] = '#include <OneWire.h>';
+            Blockly.Arduino.libraries_['dallas'] = '#include <DallasTemperature.h>';
+            Blockly.Arduino.definitions_[`onewire_${idx}`] = `OneWire oneWire_${idx}(${pin});`;
+            Blockly.Arduino.definitions_[`ds18b20_${idx}`] = `DallasTemperature ds18b20_${idx}(&oneWire_${idx});`;
+            Blockly.Arduino.setups_[`ds18b20_begin_${idx}`] = `ds18b20_${idx}.begin();`;
+        }
+        return ctx.ds18b20[key];
+    };
+
+    // --- БАЗОВЫЕ ГЕНЕРАТОРЫ ДЛЯ СТАНДАРТНЫХ БЛОКОВ ---
+    const binaryOperators = {
+        'EQ': '==',
+        'NEQ': '!=',
+        'LT': '<',
+        'LTE': '<=',
+        'GT': '>',
+        'GTE': '>='
+    };
+
+    Blockly.Arduino.forBlock['logic_boolean'] = function(block) {
+        return [block.getFieldValue('BOOL') === 'TRUE' ? 'true' : 'false', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['logic_compare'] = function(block, generator) {
+        const op = binaryOperators[block.getFieldValue('OP')] || '==';
+        const left = generator.valueToCode(block, 'A', Blockly.Arduino.ORDER_NONE) || '0';
+        const right = generator.valueToCode(block, 'B', Blockly.Arduino.ORDER_NONE) || '0';
+        return [`(${left} ${op} ${right})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['logic_operation'] = function(block, generator) {
+        const op = block.getFieldValue('OP') === 'AND' ? '&&' : '||';
+        const left = generator.valueToCode(block, 'A', Blockly.Arduino.ORDER_NONE) || 'false';
+        const right = generator.valueToCode(block, 'B', Blockly.Arduino.ORDER_NONE) || 'false';
+        return [`(${left} ${op} ${right})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['logic_negate'] = function(block, generator) {
+        const value = generator.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_NONE) || 'false';
+        return [`(!${value})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['math_number'] = function(block) {
+        return [String(block.getFieldValue('NUM')), Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['math_arithmetic'] = function(block, generator) {
+        const operatorMap = { ADD: '+', MINUS: '-', MULTIPLY: '*', DIVIDE: '/' };
+        const op = operatorMap[block.getFieldValue('OP')] || '+';
+        const left = generator.valueToCode(block, 'A', Blockly.Arduino.ORDER_NONE) || '0';
+        const right = generator.valueToCode(block, 'B', Blockly.Arduino.ORDER_NONE) || '0';
+        return [`(${left} ${op} ${right})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['math_single'] = function(block, generator) {
+        const operator = block.getFieldValue('OP');
+        const value = generator.valueToCode(block, 'NUM', Blockly.Arduino.ORDER_NONE) || '0';
+        const map = {
+            ROOT: `sqrt(${value})`,
+            ABS: `abs(${value})`,
+            NEG: `(-${value})`,
+            LN: `log(${value})`,
+            LOG10: `log10(${value})`,
+            EXP: `exp(${value})`,
+            POW10: `pow(10, ${value})`
+        };
+        return [map[operator] || value, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['math_random_int'] = function(block, generator) {
+        const from = generator.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_NONE) || '0';
+        const to = generator.valueToCode(block, 'TO', Blockly.Arduino.ORDER_NONE) || '0';
+        return [`random(${from}, (${to}) + 1)`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['variables_get'] = function(block) {
+        const name = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+        return [name, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['variables_set'] = function(block, generator) {
+        const name = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+        const value = generator.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_NONE) || '0';
+        return `${name} = ${value};\n`;
+    };
+
+    Blockly.Arduino.forBlock['text'] = function(block) {
+        const value = JSON.stringify(block.getFieldValue('TEXT') || '');
+        return [value, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['text_join'] = function(block, generator) {
+        const itemCount = block.itemCount_ || 0;
+        const values = [];
+        for (let i = 0; i < itemCount; i += 1) {
+            const part = generator.valueToCode(block, `ADD${i}`, Blockly.Arduino.ORDER_NONE) || '""';
+            values.push(`String(${part})`);
+        }
+        return [values.length ? values.join(' + ') : '""', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['text_length'] = function(block, generator) {
+        const value = generator.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_NONE) || '""';
+        return [`String(${value}).length()`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['text_isEmpty'] = function(block, generator) {
+        const value = generator.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_NONE) || '""';
+        return [`String(${value}).length() == 0`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['controls_if'] = function(block, generator) {
+        let n = 0;
+        let code = '';
+        do {
+            const condition = generator.valueToCode(block, `IF${n}`, Blockly.Arduino.ORDER_NONE) || 'false';
+            const branch = generator.statementToCode(block, `DO${n}`);
+            code += `${n === 0 ? 'if' : 'else if'} (${condition}) {\n${branch}}`;
+            n += 1;
+        } while (block.getInput(`IF${n}`));
+
+        if (block.getInput('ELSE')) {
+            code += ` else {\n${generator.statementToCode(block, 'ELSE')}}`;
+        }
+
+        return `${code}\n`;
+    };
+
+    Blockly.Arduino.forBlock['controls_repeat_ext'] = function(block, generator) {
+        const repeats = generator.valueToCode(block, 'TIMES', Blockly.Arduino.ORDER_NONE) || '0';
+        const branch = generator.statementToCode(block, 'DO');
+        const loopVar = Blockly.Arduino.nameDB_.getDistinctName('count', Blockly.Variables.NAME_TYPE);
+        return `for (int ${loopVar} = 0; ${loopVar} < ${repeats}; ${loopVar}++) {\n${branch}}\n`;
+    };
+
+    Blockly.Arduino.forBlock['controls_whileUntil'] = function(block, generator) {
+        let condition = generator.valueToCode(block, 'BOOL', Blockly.Arduino.ORDER_NONE) || 'false';
+        if (block.getFieldValue('MODE') === 'UNTIL') {
+            condition = `!(${condition})`;
+        }
+        const branch = generator.statementToCode(block, 'DO');
+        return `while (${condition}) {\n${branch}}\n`;
+    };
+
+    Blockly.Arduino.forBlock['controls_for'] = function(block, generator) {
+        const name = Blockly.Arduino.nameDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
+        const from = generator.valueToCode(block, 'FROM', Blockly.Arduino.ORDER_NONE) || '0';
+        const to = generator.valueToCode(block, 'TO', Blockly.Arduino.ORDER_NONE) || '0';
+        const by = generator.valueToCode(block, 'BY', Blockly.Arduino.ORDER_NONE) || '1';
+        const branch = generator.statementToCode(block, 'DO');
+        return `for (int ${name} = ${from}; ${name} <= ${to}; ${name} += ${by}) {\n${branch}}\n`;
+    };
+
+// 3. ГЕНЕРАТОРЫ ESP32 (ИЗ ВАШЕГО ИСХОДНИКА)
     Blockly.Arduino.forBlock['esp32_pin_mode'] = function(block) {
         const pin = block.getFieldValue('PIN');
         Blockly.Arduino.setups_['pin_mode_' + pin] = `pinMode(${pin}, ${block.getFieldValue('MODE')});`;
@@ -149,6 +311,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     Blockly.Arduino.forBlock['esp32_millis'] = function() { return ['millis()', Blockly.Arduino.ORDER_ATOMIC]; };
+    Blockly.Arduino.forBlock['esp32_micros'] = function() { return ['micros()', Blockly.Arduino.ORDER_ATOMIC]; };
+    Blockly.Arduino.forBlock['esp32_delaymicroseconds'] = function(block, generator) {
+        const us = generator.valueToCode(block, 'US', Blockly.Arduino.ORDER_NONE) || '0';
+        return `delayMicroseconds(${us});\n`;
+    };
+    Blockly.Arduino.forBlock['esp32_pwm_freq'] = function(block, generator) {
+        const freq = generator.valueToCode(block, 'FREQ', Blockly.Arduino.ORDER_NONE) || '5000';
+        const channel = block.getFieldValue('CHANNEL');
+        Blockly.Arduino.setups_[`pwm_setup_${channel}`] = `ledcSetup(${channel}, ${freq}, 8);`;
+        return '';
+    };
+    Blockly.Arduino.forBlock['esp32_adc_width'] = function(block) {
+        return `analogReadResolution(${block.getFieldValue('WIDTH')});\n`;
+    };
 
     Blockly.Arduino.forBlock['esp32_serial_init'] = function(block) {
         Blockly.Arduino.setups_['serial_init'] = `Serial.begin(${block.getFieldValue('BAUD')});`;
@@ -161,6 +337,13 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     Blockly.Arduino.forBlock['esp32_serial_available'] = function() { return ['Serial.available() > 0', Blockly.Arduino.ORDER_ATOMIC]; };
+    Blockly.Arduino.forBlock['esp32_serial_println'] = function(block, generator) {
+        const msg = generator.valueToCode(block, 'MSG', Blockly.Arduino.ORDER_NONE) || '""';
+        return `Serial.println(${msg});\n`;
+    };
+    Blockly.Arduino.forBlock['esp32_serial_read'] = function() { return ['Serial.read()', Blockly.Arduino.ORDER_ATOMIC]; };
+    Blockly.Arduino.forBlock['esp32_serial_peek'] = function() { return ['Serial.peek()', Blockly.Arduino.ORDER_ATOMIC]; };
+    Blockly.Arduino.forBlock['esp32_serial_flush'] = function() { return `Serial.flush();\n`; };
 
     Blockly.Arduino.forBlock['esp32_interrupt'] = function(block, generator) {
         const pin = block.getFieldValue('PIN');
@@ -169,6 +352,9 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.definitions_[`isr_${pin}`] = `void IRAM_ATTR ${funcName}() {\n${branch}\n}`;
         Blockly.Arduino.setups_[`attach_isr_${pin}`] = `pinMode(${pin}, INPUT_PULLUP);\n  attachInterrupt(digitalPinToInterrupt(${pin}), ${funcName}, ${block.getFieldValue('MODE')});`;
         return '';
+    };
+    Blockly.Arduino.forBlock['esp32_detach_interrupt'] = function(block) {
+        return `detachInterrupt(digitalPinToInterrupt(${block.getFieldValue('PIN')}));\n`;
     };
 
     Blockly.Arduino.forBlock['lcd_i2c_init'] = function(block) {
@@ -185,6 +371,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     Blockly.Arduino.forBlock['lcd_i2c_clear'] = function() { return `lcd.clear();\n`; };
+    Blockly.Arduino.forBlock['lcd_i2c_cursor'] = function(block) {
+        return `lcd.setCursor(${block.getFieldValue('COL')}, ${block.getFieldValue('ROW')});\n`;
+    };
+    Blockly.Arduino.forBlock['lcd_i2c_backlight'] = function(block) {
+        return `lcd.${block.getFieldValue('STATE') === 'ON' ? 'backlight' : 'noBacklight'}();\n`;
+    };
 
     Blockly.Arduino.forBlock['oled_init'] = function() {
         Blockly.Arduino.libraries_['wire'] = '#include <Wire.h>';
@@ -202,6 +394,175 @@ document.addEventListener('DOMContentLoaded', function() {
 
     Blockly.Arduino.forBlock['oled_display'] = function() { return `display.display();\n`; };
     Blockly.Arduino.forBlock['oled_clear'] = function() { return `display.clearDisplay();\n`; };
+    Blockly.Arduino.forBlock['oled_pixel'] = function(block) {
+        return `display.drawPixel(${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('COLOR')});\n`;
+    };
+    Blockly.Arduino.forBlock['oled_line'] = function(block) {
+        return `display.drawLine(${block.getFieldValue('X1')}, ${block.getFieldValue('Y1')}, ${block.getFieldValue('X2')}, ${block.getFieldValue('Y2')}, ${block.getFieldValue('COLOR')});\n`;
+    };
+    Blockly.Arduino.forBlock['oled_rect'] = function(block) {
+        return `display.drawRect(${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('W')}, ${block.getFieldValue('H')}, ${block.getFieldValue('COLOR')});\n`;
+    };
+
+
+    Blockly.Arduino.forBlock['servo_attach'] = function(block) {
+        const pin = block.getFieldValue('PIN');
+        const key = String(pin);
+        const ctx = Blockly.Arduino.context_;
+        if (ctx.servos[key] === undefined) {
+            const idx = ctx.counters.servo++;
+            ctx.servos[key] = idx;
+            Blockly.Arduino.libraries_['servo'] = '#include <ESP32Servo.h>';
+            Blockly.Arduino.definitions_[`servo_obj_${idx}`] = `Servo servo_${idx};`;
+            Blockly.Arduino.setups_[`servo_attach_${idx}`] = `servo_${idx}.attach(${pin});`;
+        }
+        return [String(ctx.servos[key]), Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['servo_write'] = function(block, generator) {
+        const servoId = generator.valueToCode(block, 'SERVO', Blockly.Arduino.ORDER_NONE) || '0';
+        const angle = block.getFieldValue('ANGLE');
+        return `servo_${servoId}.write(${angle});
+`;
+    };
+
+    Blockly.Arduino.forBlock['servo_read'] = function(block, generator) {
+        const servoId = generator.valueToCode(block, 'SERVO', Blockly.Arduino.ORDER_NONE) || '0';
+        return [`servo_${servoId}.read()`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['stepper_init'] = function(block) {
+        const in1 = block.getFieldValue('IN1');
+        const in2 = block.getFieldValue('IN2');
+        const in3 = block.getFieldValue('IN3');
+        const in4 = block.getFieldValue('IN4');
+        const key = `${in1}_${in2}_${in3}_${in4}`;
+        const ctx = Blockly.Arduino.context_;
+
+        if (ctx.steppers[key] === undefined) {
+            const idx = ctx.counters.stepper++;
+            ctx.steppers[key] = idx;
+            Blockly.Arduino.libraries_['stepper'] = '#include <Stepper.h>';
+            Blockly.Arduino.definitions_[`stepper_obj_${idx}`] = `Stepper stepper_${idx}(2048, ${in1}, ${in3}, ${in2}, ${in4});`;
+            Blockly.Arduino.setups_[`stepper_speed_${idx}`] = `stepper_${idx}.setSpeed(10);`;
+        }
+
+        return [String(ctx.steppers[key]), Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['stepper_step'] = function(block, generator) {
+        const stepperId = generator.valueToCode(block, 'STEPPER', Blockly.Arduino.ORDER_NONE) || '0';
+        const steps = block.getFieldValue('STEPS');
+        return `stepper_${stepperId}.step(${steps});
+`;
+    };
+
+    Blockly.Arduino.forBlock['dht_sensor'] = function(block) {
+        const pin = block.getFieldValue('PIN');
+        const type = block.getFieldValue('TYPE');
+        const key = `${pin}_${type}`;
+        const ctx = Blockly.Arduino.context_;
+
+        if (ctx.dht[key] === undefined) {
+            const idx = ctx.counters.dht++;
+            ctx.dht[key] = idx;
+            Blockly.Arduino.libraries_['dht'] = '#include <DHT.h>';
+            Blockly.Arduino.definitions_[`dht_type_${idx}`] = `#define DHT_TYPE_${idx} ${type}`;
+            Blockly.Arduino.definitions_[`dht_obj_${idx}`] = `DHT dht_${idx}(${pin}, DHT_TYPE_${idx});`;
+            Blockly.Arduino.setups_[`dht_begin_${idx}`] = `dht_${idx}.begin();`;
+        }
+
+        const idx = ctx.dht[key];
+        return [`(String(dht_${idx}.readTemperature()) + "," + String(dht_${idx}.readHumidity()))`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_init'] = function(block) {
+        ensureDs18b20(block.getFieldValue('PIN'));
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_request'] = function() {
+        const firstSensor = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        if (typeof firstSensor !== 'number') {
+            ensureDs18b20(4);
+        }
+        const idx = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        return `ds18b20_${idx}.requestTemperatures();
+`;
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_read'] = function() {
+        const firstSensor = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        if (typeof firstSensor !== 'number') {
+            ensureDs18b20(4);
+        }
+        const idx = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        return [`ds18b20_${idx}.getTempCByIndex(0)`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['wifi_connect'] = function(block) {
+        const ssid = JSON.stringify(block.getFieldValue('SSID'));
+        const password = JSON.stringify(block.getFieldValue('PASSWORD'));
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return `WiFi.mode(WIFI_STA);
+WiFi.begin(${ssid}, ${password});
+while (WiFi.status() != WL_CONNECTED) {
+  delay(500);
+}
+`;
+    };
+
+    Blockly.Arduino.forBlock['wifi_status'] = function() {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return ['WiFi.status() == WL_CONNECTED', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['wifi_ip'] = function() {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return ['WiFi.localIP().toString()', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['http_request'] = function(block) {
+        const method = block.getFieldValue('METHOD');
+        const url = JSON.stringify(block.getFieldValue('URL'));
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        Blockly.Arduino.libraries_['http'] = '#include <HTTPClient.h>';
+        Blockly.Arduino.definitions_['http_helper'] = `String blocklyHttpRequest(const String& method, const String& url) {
+  HTTPClient http;
+  http.begin(url);
+  int code = method == "POST" ? http.POST("") : http.GET();
+  String payload = code > 0 ? http.getString() : String("");
+  http.end();
+  return payload;
+}`;
+        return [`blocklyHttpRequest(${JSON.stringify(method)}, ${url})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['mqtt_init'] = function(block) {
+        const server = JSON.stringify(block.getFieldValue('SERVER'));
+        const port = block.getFieldValue('PORT');
+        ensureMqttHelpers();
+        Blockly.Arduino.setups_['mqtt_server'] = `mqttClient.setServer(${server}, ${port});`;
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['mqtt_publish'] = function(block, generator) {
+        const topic = JSON.stringify(block.getFieldValue('TOPIC'));
+        const message = generator.valueToCode(block, 'MESSAGE', Blockly.Arduino.ORDER_NONE) || '""';
+        ensureMqttHelpers();
+        return `ensureMqttConnection();
+mqttClient.publish(${topic}, String(${message}).c_str());
+mqttClient.loop();
+`;
+    };
+
+    Blockly.Arduino.forBlock['mqtt_subscribe'] = function(block) {
+        const topic = block.getFieldValue('TOPIC');
+        const topicLiteral = JSON.stringify(topic);
+        ensureMqttHelpers();
+        Blockly.Arduino.setups_[`mqtt_sub_${normalizeKey(topic)}`] = `mqttClient.subscribe(${topicLiteral});`;
+        return `ensureMqttConnection();\nmqttClient.loop();\n`;
+    };
 
     // 4. ЗАПУСК И ГЛОБАЛЬНЫЕ ФУНКЦИИ (ДЛЯ КНОПОК HTML)
     window.workspace = Blockly.inject(blocklyDiv, {
@@ -233,14 +594,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ code: code })
+                body: JSON.stringify({
+                    code: code,
+                    options: {
+                        delay: Number(document.getElementById('loopDelay')?.value || 10)
+                    }
+                })
             });
             
+            const result = await response.json().catch(() => null);
             if (!response.ok) {
-                throw new Error(`Ошибка компиляции: ${response.statusText}`);
+                const serverError = result?.error || result?.details || response.statusText;
+                throw new Error(`Ошибка компиляции: ${serverError}`);
             }
-            
-            const result = await response.json();
             
             if (result.success) {
                 console.log('Компиляция успешна:', result.message);
@@ -302,11 +668,15 @@ function getToolboxConfig() {
             { 'kind': 'category', 'name': 'Переменные', 'custom': 'VARIABLE', 'colour': '330' },
             { 'kind': 'category', 'name': 'Функции', 'custom': 'PROCEDURE', 'colour': '290' },
             { 'kind': 'sep' },
-            { 'kind': 'category', 'name': 'Входы/Выходы', 'colour': '160', 'contents': [{ 'kind': 'block', 'type': 'esp32_pin_mode' }, { 'kind': 'block', 'type': 'esp32_digital_write' }, { 'kind': 'block', 'type': 'esp32_digital_read' }, { 'kind': 'block', 'type': 'esp32_pwm_write' }, { 'kind': 'block', 'type': 'esp32_analog_read' }] },
-            { 'kind': 'category', 'name': 'Монитор порта', 'colour': '20', 'contents': [{ 'kind': 'block', 'type': 'esp32_serial_init' }, { 'kind': 'block', 'type': 'esp32_serial_print' }, { 'kind': 'block', 'type': 'esp32_serial_available' }] },
-            { 'kind': 'category', 'name': 'Дисплей LCD', 'colour': '190', 'contents': [{ 'kind': 'block', 'type': 'lcd_i2c_init' }, { 'kind': 'block', 'type': 'lcd_i2c_print' }, { 'kind': 'block', 'type': 'lcd_i2c_clear' }] },
-            { 'kind': 'category', 'name': 'Дисплей OLED', 'colour': '180', 'contents': [{ 'kind': 'block', 'type': 'oled_init' }, { 'kind': 'block', 'type': 'oled_print' }, { 'kind': 'block', 'type': 'oled_display' }, { 'kind': 'block', 'type': 'oled_clear' }] },
-            { 'kind': 'category', 'name': 'Прерывания', 'colour': '290', 'contents': [{ 'kind': 'block', 'type': 'esp32_interrupt' }] }
+            { 'kind': 'category', 'name': 'Входы/Выходы', 'colour': '160', 'contents': [{ 'kind': 'block', 'type': 'esp32_pin_mode' }, { 'kind': 'block', 'type': 'esp32_digital_write' }, { 'kind': 'block', 'type': 'esp32_digital_read' }, { 'kind': 'block', 'type': 'esp32_pwm_write' }, { 'kind': 'block', 'type': 'esp32_pwm_freq' }, { 'kind': 'block', 'type': 'esp32_analog_read' }, { 'kind': 'block', 'type': 'esp32_adc_width' }] },
+            { 'kind': 'category', 'name': 'Время', 'colour': '65', 'contents': [{ 'kind': 'block', 'type': 'esp32_delay' }, { 'kind': 'block', 'type': 'esp32_delaymicroseconds' }, { 'kind': 'block', 'type': 'esp32_millis' }, { 'kind': 'block', 'type': 'esp32_micros' }] },
+            { 'kind': 'category', 'name': 'Монитор порта', 'colour': '20', 'contents': [{ 'kind': 'block', 'type': 'esp32_serial_init' }, { 'kind': 'block', 'type': 'esp32_serial_print' }, { 'kind': 'block', 'type': 'esp32_serial_println' }, { 'kind': 'block', 'type': 'esp32_serial_available' }, { 'kind': 'block', 'type': 'esp32_serial_read' }, { 'kind': 'block', 'type': 'esp32_serial_peek' }, { 'kind': 'block', 'type': 'esp32_serial_flush' }] },
+            { 'kind': 'category', 'name': 'Дисплей LCD', 'colour': '190', 'contents': [{ 'kind': 'block', 'type': 'lcd_i2c_init' }, { 'kind': 'block', 'type': 'lcd_i2c_print' }, { 'kind': 'block', 'type': 'lcd_i2c_clear' }, { 'kind': 'block', 'type': 'lcd_i2c_cursor' }, { 'kind': 'block', 'type': 'lcd_i2c_backlight' }] },
+            { 'kind': 'category', 'name': 'Дисплей OLED', 'colour': '180', 'contents': [{ 'kind': 'block', 'type': 'oled_init' }, { 'kind': 'block', 'type': 'oled_print' }, { 'kind': 'block', 'type': 'oled_display' }, { 'kind': 'block', 'type': 'oled_clear' }, { 'kind': 'block', 'type': 'oled_pixel' }, { 'kind': 'block', 'type': 'oled_line' }, { 'kind': 'block', 'type': 'oled_rect' }] },
+            { 'kind': 'category', 'name': 'Датчики', 'colour': '200', 'contents': [{ 'kind': 'block', 'type': 'dht_sensor' }, { 'kind': 'block', 'type': 'ds18b20_init' }, { 'kind': 'block', 'type': 'ds18b20_request' }, { 'kind': 'block', 'type': 'ds18b20_read' }] },
+            { 'kind': 'category', 'name': 'Моторы', 'colour': '260', 'contents': [{ 'kind': 'block', 'type': 'servo_attach' }, { 'kind': 'block', 'type': 'servo_write' }, { 'kind': 'block', 'type': 'servo_read' }, { 'kind': 'block', 'type': 'stepper_init' }, { 'kind': 'block', 'type': 'stepper_step' }] },
+            { 'kind': 'category', 'name': 'Сеть', 'colour': '225', 'contents': [{ 'kind': 'block', 'type': 'wifi_connect' }, { 'kind': 'block', 'type': 'wifi_status' }, { 'kind': 'block', 'type': 'wifi_ip' }, { 'kind': 'block', 'type': 'http_request' }, { 'kind': 'block', 'type': 'mqtt_init' }, { 'kind': 'block', 'type': 'mqtt_publish' }, { 'kind': 'block', 'type': 'mqtt_subscribe' }] },
+            { 'kind': 'category', 'name': 'Прерывания', 'colour': '290', 'contents': [{ 'kind': 'block', 'type': 'esp32_interrupt' }, { 'kind': 'block', 'type': 'esp32_detach_interrupt' }] }
         ]
     };
 }

@@ -117,32 +117,10 @@ async function createPlatformIOProject(workspacePath, code, options) {
     await fs.mkdir(path.join(workspacePath, 'lib'), { recursive: true });
     
     // Основной файл
+    const sourceCode = buildSourceCode(workspacePath, code, options);
     await fs.writeFile(
         path.join(workspacePath, 'src', 'main.cpp'),
-        `// ESP32 Blockly Generated Code
-// Project ID: ${path.basename(workspacePath)}
-// Generated: ${new Date().toISOString()}
-
-#include <Arduino.h>
-
-${code}
-
-void setup() {
-    Serial.begin(115200);
-    delay(1000);
-    Serial.println("\\n\\n=== ESP32 Blockly Project ===");
-    Serial.println("Project: ${path.basename(workspacePath)}");
-    
-    setup_blocks();
-    
-    Serial.println("Setup completed!");
-    Serial.println("=====================\\n");
-}
-
-void loop() {
-    loop_blocks();
-    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
-}`
+        sourceCode
     );
     
     // PlatformIO конфигурация
@@ -157,6 +135,13 @@ build_flags =
     -Wno-unused-variable
     -Wno-unused-function
 lib_deps = 
+    adafruit/DHT sensor library@^1.4.6
+    milesburton/DallasTemperature@^3.11.0
+    knolleary/PubSubClient@^2.8
+    madhephaestus/ESP32Servo@^3.0.6
+    marcoschwartz/LiquidCrystal_I2C@^1.1.4
+    adafruit/Adafruit GFX Library@^1.12.0
+    adafruit/Adafruit SSD1306@^2.5.11
     ${options.libraries ? options.libraries.join('\n    ') : ''}
 upload_port = /dev/ttyUSB0
 `;
@@ -175,6 +160,35 @@ upload_port = /dev/ttyUSB0
             );
         }
     }
+}
+
+
+function buildSourceCode(workspacePath, code, options) {
+    const hasSetupLoop = /void\s+setup\s*\(/.test(code) && /void\s+loop\s*\(/.test(code);
+    if (hasSetupLoop) {
+        return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+${code}
+`;
+    }
+
+    return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+#include <Arduino.h>
+
+${code}
+
+void setup() {
+    Serial.begin(115200);
+}
+
+void loop() {
+    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
+}`;
 }
 
 async function compileProject(workspacePath) {
