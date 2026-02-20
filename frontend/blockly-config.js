@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. ОПРЕДЕЛЕНИЕ БЛОКОВ (JSON) - ПОЛНЫЙ СПИСОК
     Blockly.defineBlocksWithJsonArray([
+        { "type": "esp32_setup", "message0": "setup %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
+        { "type": "esp32_loop", "message0": "loop %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
         { "type": "esp32_delay", "message0": "ждать %1 мс", "args0": [{ "type": "input_value", "name": "MS", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 65 },
         { "type": "esp32_millis", "message0": "время с старта (мс)", "output": "Number", "colour": 65 },
         { "type": "esp32_micros", "message0": "время с старта (мкс)", "output": "Number", "colour": 65 },
@@ -282,6 +284,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
 // 3. ГЕНЕРАТОРЫ ESP32 (ИЗ ВАШЕГО ИСХОДНИКА)
+    Blockly.Arduino.forBlock['esp32_setup'] = function(block, generator) {
+        const branch = generator.statementToCode(block, 'DO');
+        if (branch && branch.trim()) {
+            Blockly.Arduino.setups_[`custom_setup_${block.id}`] = branch.trimEnd();
+        }
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['esp32_loop'] = function(block, generator) {
+        const branch = generator.statementToCode(block, 'DO');
+        return branch || '';
+    };
+
     Blockly.Arduino.forBlock['esp32_pin_mode'] = function(block) {
         const pin = block.getFieldValue('PIN');
         Blockly.Arduino.setups_['pin_mode_' + pin] = `pinMode(${pin}, ${block.getFieldValue('MODE')});`;
@@ -653,6 +668,7 @@ function getToolboxConfig() {
     return {
         'kind': 'categoryToolbox',
         'contents': [
+            { 'kind': 'category', 'name': 'Структура', 'colour': '15', 'contents': [{ 'kind': 'block', 'type': 'esp32_setup' }, { 'kind': 'block', 'type': 'esp32_loop' }] },
             { 'kind': 'category', 'name': 'Логика', 'colour': '210', 'contents': [{ 'kind': 'block', 'type': 'controls_if' }, { 'kind': 'block', 'type': 'logic_compare' }, { 'kind': 'block', 'type': 'logic_operation' }, { 'kind': 'block', 'type': 'logic_negate' }, { 'kind': 'block', 'type': 'logic_boolean' }] },
             { 'kind': 'category', 'name': 'Циклы', 'colour': '120', 'contents': [{ 'kind': 'block', 'type': 'controls_repeat_ext' }, { 'kind': 'block', 'type': 'controls_whileUntil' }, { 'kind': 'block', 'type': 'controls_for' }] },
             { 'kind': 'category', 'name': 'Математика', 'colour': '230', 'contents': [{ 'kind': 'block', 'type': 'math_number' }, { 'kind': 'block', 'type': 'math_arithmetic' }, { 'kind': 'block', 'type': 'math_single' }, { 'kind': 'block', 'type': 'math_random_int' }] },
