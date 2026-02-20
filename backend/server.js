@@ -117,32 +117,10 @@ async function createPlatformIOProject(workspacePath, code, options) {
     await fs.mkdir(path.join(workspacePath, 'lib'), { recursive: true });
     
     // Основной файл
+    const sourceCode = buildSourceCode(workspacePath, code, options);
     await fs.writeFile(
         path.join(workspacePath, 'src', 'main.cpp'),
-        `// ESP32 Blockly Generated Code
-// Project ID: ${path.basename(workspacePath)}
-// Generated: ${new Date().toISOString()}
-
-#include <Arduino.h>
-
-${code}
-
-void setup() {
-    Serial.begin(115200);
-    delay(1000);
-    Serial.println("\\n\\n=== ESP32 Blockly Project ===");
-    Serial.println("Project: ${path.basename(workspacePath)}");
-    
-    setup_blocks();
-    
-    Serial.println("Setup completed!");
-    Serial.println("=====================\\n");
-}
-
-void loop() {
-    loop_blocks();
-    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
-}`
+        sourceCode
     );
     
     // PlatformIO конфигурация
@@ -175,6 +153,35 @@ upload_port = /dev/ttyUSB0
             );
         }
     }
+}
+
+
+function buildSourceCode(workspacePath, code, options) {
+    const hasSetupLoop = /void\s+setup\s*\(/.test(code) && /void\s+loop\s*\(/.test(code);
+    if (hasSetupLoop) {
+        return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+${code}
+`;
+    }
+
+    return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+#include <Arduino.h>
+
+${code}
+
+void setup() {
+    Serial.begin(115200);
+}
+
+void loop() {
+    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
+}`;
 }
 
 async function compileProject(workspacePath) {
