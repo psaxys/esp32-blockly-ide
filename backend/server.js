@@ -135,6 +135,13 @@ build_flags =
     -Wno-unused-variable
     -Wno-unused-function
 lib_deps = 
+    adafruit/DHT sensor library@^1.4.6
+    milesburton/DallasTemperature@^3.11.0
+    knolleary/PubSubClient@^2.8
+    madhephaestus/ESP32Servo@^3.0.6
+    marcoschwartz/LiquidCrystal_I2C@^1.1.4
+    adafruit/Adafruit GFX Library@^1.12.0
+    adafruit/Adafruit SSD1306@^2.5.11
     ${options.libraries ? options.libraries.join('\n    ') : ''}
 upload_port = /dev/ttyUSB0
 `;

@@ -68,6 +68,18 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.definitions_ = Object.create(null);
         Blockly.Arduino.setups_ = Object.create(null);
         Blockly.Arduino.libraries_ = Object.create(null);
+        Blockly.Arduino.context_ = {
+            servos: {},
+            steppers: {},
+            dht: {},
+            ds18b20: {},
+            counters: {
+                servo: 0,
+                stepper: 0,
+                dht: 0,
+                ds18b20: 0
+            }
+        };
         
         if (!Blockly.Arduino.nameDB_) {
             Blockly.Arduino.nameDB_ = new Blockly.Names(Blockly.Arduino.RESERVED_WORDS_);
@@ -90,6 +102,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const nextBlock = block.getNextBlock();
         const nextCode = (nextBlock && !opt_thisOnly) ? Blockly.Arduino.blockToCode(nextBlock) : '';
         return code + nextCode;
+    };
+
+    const normalizeKey = (value) => String(value).replace(/[^a-zA-Z0-9_]/g, '_');
+
+    const ensureMqttHelpers = () => {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        Blockly.Arduino.libraries_['mqtt'] = '#include <PubSubClient.h>';
+        Blockly.Arduino.definitions_['mqtt_wifi_client'] = 'WiFiClient esp32MqttNetClient;';
+        Blockly.Arduino.definitions_['mqtt_client'] = 'PubSubClient mqttClient(esp32MqttNetClient);';
+        Blockly.Arduino.definitions_['mqtt_reconnect'] = `void ensureMqttConnection() {
+  while (!mqttClient.connected()) {
+    String clientId = "esp32-blockly-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    if (mqttClient.connect(clientId.c_str())) {
+      break;
+    }
+    delay(1000);
+  }
+}`;
+    };
+
+    const ensureDs18b20 = (pin) => {
+        const key = String(pin);
+        const ctx = Blockly.Arduino.context_;
+        if (!ctx.ds18b20[key]) {
+            const idx = ctx.counters.ds18b20++;
+            ctx.ds18b20[key] = idx;
+            Blockly.Arduino.libraries_['onewire'] = '#include <OneWire.h>';
+            Blockly.Arduino.libraries_['dallas'] = '#include <DallasTemperature.h>';
+            Blockly.Arduino.definitions_[`onewire_${idx}`] = `OneWire oneWire_${idx}(${pin});`;
+            Blockly.Arduino.definitions_[`ds18b20_${idx}`] = `DallasTemperature ds18b20_${idx}(&oneWire_${idx});`;
+            Blockly.Arduino.setups_[`ds18b20_begin_${idx}`] = `ds18b20_${idx}.begin();`;
+        }
+        return ctx.ds18b20[key];
     };
 
     // --- БАЗОВЫЕ ГЕНЕРАТОРЫ ДЛЯ СТАНДАРТНЫХ БЛОКОВ ---
@@ -357,6 +402,166 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     Blockly.Arduino.forBlock['oled_rect'] = function(block) {
         return `display.drawRect(${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('W')}, ${block.getFieldValue('H')}, ${block.getFieldValue('COLOR')});\n`;
+    };
+
+
+    Blockly.Arduino.forBlock['servo_attach'] = function(block) {
+        const pin = block.getFieldValue('PIN');
+        const key = String(pin);
+        const ctx = Blockly.Arduino.context_;
+        if (!ctx.servos[key]) {
+            const idx = ctx.counters.servo++;
+            ctx.servos[key] = idx;
+            Blockly.Arduino.libraries_['servo'] = '#include <ESP32Servo.h>';
+            Blockly.Arduino.definitions_[`servo_obj_${idx}`] = `Servo servo_${idx};`;
+            Blockly.Arduino.setups_[`servo_attach_${idx}`] = `servo_${idx}.attach(${pin});`;
+        }
+        return [String(ctx.servos[key]), Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['servo_write'] = function(block, generator) {
+        const servoId = generator.valueToCode(block, 'SERVO', Blockly.Arduino.ORDER_NONE) || '0';
+        const angle = block.getFieldValue('ANGLE');
+        return `servo_${servoId}.write(${angle});
+`;
+    };
+
+    Blockly.Arduino.forBlock['servo_read'] = function(block, generator) {
+        const servoId = generator.valueToCode(block, 'SERVO', Blockly.Arduino.ORDER_NONE) || '0';
+        return [`servo_${servoId}.read()`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['stepper_init'] = function(block) {
+        const in1 = block.getFieldValue('IN1');
+        const in2 = block.getFieldValue('IN2');
+        const in3 = block.getFieldValue('IN3');
+        const in4 = block.getFieldValue('IN4');
+        const key = `${in1}_${in2}_${in3}_${in4}`;
+        const ctx = Blockly.Arduino.context_;
+
+        if (!ctx.steppers[key]) {
+            const idx = ctx.counters.stepper++;
+            ctx.steppers[key] = idx;
+            Blockly.Arduino.libraries_['stepper'] = '#include <Stepper.h>';
+            Blockly.Arduino.definitions_[`stepper_obj_${idx}`] = `Stepper stepper_${idx}(2048, ${in1}, ${in3}, ${in2}, ${in4});`;
+            Blockly.Arduino.setups_[`stepper_speed_${idx}`] = `stepper_${idx}.setSpeed(10);`;
+        }
+
+        return [String(ctx.steppers[key]), Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['stepper_step'] = function(block, generator) {
+        const stepperId = generator.valueToCode(block, 'STEPPER', Blockly.Arduino.ORDER_NONE) || '0';
+        const steps = block.getFieldValue('STEPS');
+        return `stepper_${stepperId}.step(${steps});
+`;
+    };
+
+    Blockly.Arduino.forBlock['dht_sensor'] = function(block) {
+        const pin = block.getFieldValue('PIN');
+        const type = block.getFieldValue('TYPE');
+        const key = `${pin}_${type}`;
+        const ctx = Blockly.Arduino.context_;
+
+        if (!ctx.dht[key]) {
+            const idx = ctx.counters.dht++;
+            ctx.dht[key] = idx;
+            Blockly.Arduino.libraries_['dht'] = '#include <DHT.h>';
+            Blockly.Arduino.definitions_[`dht_type_${idx}`] = `#define DHT_TYPE_${idx} ${type}`;
+            Blockly.Arduino.definitions_[`dht_obj_${idx}`] = `DHT dht_${idx}(${pin}, DHT_TYPE_${idx});`;
+            Blockly.Arduino.setups_[`dht_begin_${idx}`] = `dht_${idx}.begin();`;
+        }
+
+        const idx = ctx.dht[key];
+        return [`(String(dht_${idx}.readTemperature()) + "," + String(dht_${idx}.readHumidity()))`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_init'] = function(block) {
+        ensureDs18b20(block.getFieldValue('PIN'));
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_request'] = function() {
+        const firstSensor = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        if (typeof firstSensor !== 'number') {
+            ensureDs18b20(4);
+        }
+        const idx = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        return `ds18b20_${idx}.requestTemperatures();
+`;
+    };
+
+    Blockly.Arduino.forBlock['ds18b20_read'] = function() {
+        const firstSensor = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        if (typeof firstSensor !== 'number') {
+            ensureDs18b20(4);
+        }
+        const idx = Object.values(Blockly.Arduino.context_.ds18b20)[0];
+        return [`ds18b20_${idx}.getTempCByIndex(0)`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['wifi_connect'] = function(block) {
+        const ssid = JSON.stringify(block.getFieldValue('SSID'));
+        const password = JSON.stringify(block.getFieldValue('PASSWORD'));
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return `WiFi.mode(WIFI_STA);
+WiFi.begin(${ssid}, ${password});
+while (WiFi.status() != WL_CONNECTED) {
+  delay(500);
+}
+`;
+    };
+
+    Blockly.Arduino.forBlock['wifi_status'] = function() {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return ['WiFi.status() == WL_CONNECTED', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['wifi_ip'] = function() {
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        return ['WiFi.localIP().toString()', Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['http_request'] = function(block) {
+        const method = block.getFieldValue('METHOD');
+        const url = JSON.stringify(block.getFieldValue('URL'));
+        Blockly.Arduino.libraries_['wifi'] = '#include <WiFi.h>';
+        Blockly.Arduino.libraries_['http'] = '#include <HTTPClient.h>';
+        Blockly.Arduino.definitions_['http_helper'] = `String blocklyHttpRequest(const String& method, const String& url) {
+  HTTPClient http;
+  http.begin(url);
+  int code = method == "POST" ? http.POST("") : http.GET();
+  String payload = code > 0 ? http.getString() : String("");
+  http.end();
+  return payload;
+}`;
+        return [`blocklyHttpRequest(${JSON.stringify(method)}, ${url})`, Blockly.Arduino.ORDER_ATOMIC];
+    };
+
+    Blockly.Arduino.forBlock['mqtt_init'] = function(block) {
+        const server = JSON.stringify(block.getFieldValue('SERVER'));
+        const port = block.getFieldValue('PORT');
+        ensureMqttHelpers();
+        Blockly.Arduino.setups_['mqtt_server'] = `mqttClient.setServer(${server}, ${port});`;
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['mqtt_publish'] = function(block, generator) {
+        const topic = JSON.stringify(block.getFieldValue('TOPIC'));
+        const message = generator.valueToCode(block, 'MESSAGE', Blockly.Arduino.ORDER_NONE) || '""';
+        ensureMqttHelpers();
+        return `ensureMqttConnection();
+mqttClient.publish(${topic}, String(${message}).c_str());
+mqttClient.loop();
+`;
+    };
+
+    Blockly.Arduino.forBlock['mqtt_subscribe'] = function(block) {
+        const topic = block.getFieldValue('TOPIC');
+        const topicLiteral = JSON.stringify(topic);
+        ensureMqttHelpers();
+        Blockly.Arduino.setups_[`mqtt_sub_${normalizeKey(topic)}`] = `mqttClient.subscribe(${topicLiteral});`;
+        return `ensureMqttConnection();\nmqttClient.loop();\n`;
     };
 
     // 4. ЗАПУСК И ГЛОБАЛЬНЫЕ ФУНКЦИИ (ДЛЯ КНОПОК HTML)
