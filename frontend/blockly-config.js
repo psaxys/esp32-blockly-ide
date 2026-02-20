@@ -657,7 +657,14 @@ function generateFullCode() {
         const defs = Object.values(Blockly.Arduino.definitions_ || {}).join('\n');
         const setups = Object.values(Blockly.Arduino.setups_ || {}).join('\n  ');
 
-        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
+        const setupBlocks = window.workspace.getBlocksByType('esp32_setup', false);
+        const loopBlocks = window.workspace.getBlocksByType('esp32_loop', false);
+        if (setupBlocks.length > 1 || loopBlocks.length > 1) {
+            console.warn('Рекомендуется использовать только один блок setup и один блок loop.');
+        }
+
+        const loopTail = loopBlocks.length > 0 ? '' : '\n  delay(1);';
+        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}${loopTail}\n}`;
         if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
         return fullCode;
     } catch (e) { return "// Ошибка: " + e.message; }
