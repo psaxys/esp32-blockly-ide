@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. ОПРЕДЕЛЕНИЕ БЛОКОВ (JSON) - ПОЛНЫЙ СПИСОК
     Blockly.defineBlocksWithJsonArray([
+        { "type": "esp32_setup", "message0": "setup %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
+        { "type": "esp32_loop", "message0": "loop %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
         { "type": "esp32_delay", "message0": "ждать %1 мс", "args0": [{ "type": "input_value", "name": "MS", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 65 },
         { "type": "esp32_millis", "message0": "время с старта (мс)", "output": "Number", "colour": 65 },
         { "type": "esp32_micros", "message0": "время с старта (мкс)", "output": "Number", "colour": 65 },
@@ -90,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         Blockly.Arduino.nameDB_.setVariableMap(workspace.getVariableMap());
 
         const defvars = [];
-        const variables = workspace.getVariableMap().getAllVariables ? workspace.getVariableMap().getAllVariables() : workspace.getAllVariables(); 
+        const variables = workspace.getVariableMap().getAllVariables();
         for (let i = 0; i < variables.length; i++) {
             const varName = Blockly.Arduino.nameDB_.getName(variables[i].getId(), Blockly.Variables.NAME_TYPE);
             defvars.push(`float ${varName} = 0;`); 
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const ensureDs18b20 = (pin) => {
         const key = String(pin);
         const ctx = Blockly.Arduino.context_;
-        if (!ctx.ds18b20[key]) {
+        if (ctx.ds18b20[key] === undefined) {
             const idx = ctx.counters.ds18b20++;
             ctx.ds18b20[key] = idx;
             Blockly.Arduino.libraries_['onewire'] = '#include <OneWire.h>';
@@ -282,6 +284,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
 // 3. ГЕНЕРАТОРЫ ESP32 (ИЗ ВАШЕГО ИСХОДНИКА)
+    Blockly.Arduino.forBlock['esp32_setup'] = function(block, generator) {
+        const branch = generator.statementToCode(block, 'DO');
+        if (branch && branch.trim()) {
+            Blockly.Arduino.setups_[`custom_setup_${block.id}`] = branch.trimEnd();
+        }
+        return '';
+    };
+
+    Blockly.Arduino.forBlock['esp32_loop'] = function(block, generator) {
+        const branch = generator.statementToCode(block, 'DO');
+        return branch || '';
+    };
+
     Blockly.Arduino.forBlock['esp32_pin_mode'] = function(block) {
         const pin = block.getFieldValue('PIN');
         Blockly.Arduino.setups_['pin_mode_' + pin] = `pinMode(${pin}, ${block.getFieldValue('MODE')});`;
@@ -409,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const pin = block.getFieldValue('PIN');
         const key = String(pin);
         const ctx = Blockly.Arduino.context_;
-        if (!ctx.servos[key]) {
+        if (ctx.servos[key] === undefined) {
             const idx = ctx.counters.servo++;
             ctx.servos[key] = idx;
             Blockly.Arduino.libraries_['servo'] = '#include <ESP32Servo.h>';
@@ -439,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const key = `${in1}_${in2}_${in3}_${in4}`;
         const ctx = Blockly.Arduino.context_;
 
-        if (!ctx.steppers[key]) {
+        if (ctx.steppers[key] === undefined) {
             const idx = ctx.counters.stepper++;
             ctx.steppers[key] = idx;
             Blockly.Arduino.libraries_['stepper'] = '#include <Stepper.h>';
@@ -463,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const key = `${pin}_${type}`;
         const ctx = Blockly.Arduino.context_;
 
-        if (!ctx.dht[key]) {
+        if (ctx.dht[key] === undefined) {
             const idx = ctx.counters.dht++;
             ctx.dht[key] = idx;
             Blockly.Arduino.libraries_['dht'] = '#include <DHT.h>';
@@ -602,11 +617,11 @@ mqttClient.loop();
                 })
             });
             
+            const result = await response.json().catch(() => null);
             if (!response.ok) {
-                throw new Error(`Ошибка компиляции: ${response.statusText}`);
+                const serverError = result?.error || result?.details || response.statusText;
+                throw new Error(`Ошибка компиляции: ${serverError}`);
             }
-            
-            const result = await response.json();
             
             if (result.success) {
                 console.log('Компиляция успешна:', result.message);
@@ -642,7 +657,14 @@ function generateFullCode() {
         const defs = Object.values(Blockly.Arduino.definitions_ || {}).join('\n');
         const setups = Object.values(Blockly.Arduino.setups_ || {}).join('\n  ');
 
-        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}\n  delay(1);\n}`;
+        const setupBlocks = window.workspace.getBlocksByType('esp32_setup', false);
+        const loopBlocks = window.workspace.getBlocksByType('esp32_loop', false);
+        if (setupBlocks.length > 1 || loopBlocks.length > 1) {
+            console.warn('Рекомендуется использовать только один блок setup и один блок loop.');
+        }
+
+        const loopTail = loopBlocks.length > 0 ? '' : '\n  delay(1);';
+        const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}${loopTail}\n}`;
         if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
         return fullCode;
     } catch (e) { return "// Ошибка: " + e.message; }
@@ -653,6 +675,7 @@ function getToolboxConfig() {
     return {
         'kind': 'categoryToolbox',
         'contents': [
+            { 'kind': 'category', 'name': 'Структура', 'colour': '15', 'contents': [{ 'kind': 'block', 'type': 'esp32_setup' }, { 'kind': 'block', 'type': 'esp32_loop' }] },
             { 'kind': 'category', 'name': 'Логика', 'colour': '210', 'contents': [{ 'kind': 'block', 'type': 'controls_if' }, { 'kind': 'block', 'type': 'logic_compare' }, { 'kind': 'block', 'type': 'logic_operation' }, { 'kind': 'block', 'type': 'logic_negate' }, { 'kind': 'block', 'type': 'logic_boolean' }] },
             { 'kind': 'category', 'name': 'Циклы', 'colour': '120', 'contents': [{ 'kind': 'block', 'type': 'controls_repeat_ext' }, { 'kind': 'block', 'type': 'controls_whileUntil' }, { 'kind': 'block', 'type': 'controls_for' }] },
             { 'kind': 'category', 'name': 'Математика', 'colour': '230', 'contents': [{ 'kind': 'block', 'type': 'math_number' }, { 'kind': 'block', 'type': 'math_arithmetic' }, { 'kind': 'block', 'type': 'math_single' }, { 'kind': 'block', 'type': 'math_random_int' }] },
