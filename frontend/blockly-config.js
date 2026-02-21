@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.workspace) return; 
 
     const blocklyDiv = document.getElementById('blocklyDiv');
+    // Совместимость с Blockly v12+: убираем deprecated warning getAllVariables
+    if (Blockly.Workspace && Blockly.Workspace.prototype && Blockly.Workspace.prototype.getVariableMap) {
+        Blockly.Workspace.prototype.getAllVariables = function() {
+            return this.getVariableMap().getAllVariables();
+        };
+    }
+
     if (!blocklyDiv) return;
 
     // 1. ОПРЕДЕЛЕНИЕ БЛОКОВ (JSON) - ПОЛНЫЙ СПИСОК

@@ -19,7 +19,8 @@ RUN apk add --no-cache \
 # Устанавливаем PlatformIO в venv (PEP 668 compatible для Alpine)
 RUN python3 -m venv /opt/pio \
     && /opt/pio/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/pio/bin/pip install --no-cache-dir platformio==6.1.11
+    && /opt/pio/bin/pip install --no-cache-dir platformio==6.1.11 \
+    && /opt/pio/bin/pio pkg install -g -p espressif32
 
 # Копирование файлов проекта
 COPY backend/package*.json ./backend/
