@@ -1,6 +1,7 @@
 FROM node:18-alpine
 
 WORKDIR /usr/src/app
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Установка системных зависимостей
 RUN apk add --no-cache \
@@ -12,7 +13,11 @@ RUN apk add --no-cache \
     linux-headers \
     bash \
     curl \
-    git
+    git \
+    libstdc++
+
+# Устанавливаем PlatformIO для компиляции прямо в web-контейнере
+RUN pip3 install --no-cache-dir platformio==6.1.11
 
 # Копирование файлов проекта
 COPY backend/package*.json ./backend/
