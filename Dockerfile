@@ -1,18 +1,27 @@
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 
 WORKDIR /usr/src/app
+ENV PATH="/opt/pio/bin:/usr/local/bin:${PATH}"
 
-# Установка системных зависимостей
-RUN apk add --no-cache \
+# Debian base нужен для совместимости ESP32 toolchain (xtensa-esp32-elf-g++)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
-    py3-pip \
+    python3-venv \
+    python3-pip \
     make \
     gcc \
     g++ \
-    linux-headers \
     bash \
     curl \
-    git
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# PlatformIO + ESP32 platform/toolchain в venv
+RUN python3 -m venv /opt/pio \
+    && /opt/pio/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/pio/bin/pip install --no-cache-dir platformio==6.1.11 \
+    && /opt/pio/bin/pio platform install espressif32
 
 # Копирование файлов проекта
 COPY backend/package*.json ./backend/
