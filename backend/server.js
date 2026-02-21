@@ -194,6 +194,12 @@ void loop() {
 async function compileProject(workspacePath) {
     try {
         console.log(`Запуск компиляции в ${workspacePath}`);
+
+        try {
+            await execPromise('command -v pio');
+        } catch (_) {
+            throw new Error('PlatformIO (pio) не найден в web-контейнере. Пересоберите контейнер после обновления Dockerfile: docker-compose build web && docker-compose up -d web');
+        }
         
         // Запускаем компиляцию через PlatformIO
         const { stdout, stderr } = await execPromise(
@@ -218,9 +224,13 @@ async function compileProject(workspacePath) {
     } catch (error) {
         // Пытаемся получить больше информации об ошибке
         const errorLog = path.join(workspacePath, 'compile-error.log');
-        await fs.writeFile(errorLog, `STDOUT: ${error.stdout}\\n\\nSTDERR: ${error.stderr}`);
+        await fs.writeFile(errorLog, `STDOUT: ${error.stdout || ''}
+
+STDERR: ${error.stderr || ''}`);
         
-        throw new Error(`Ошибка компиляции: ${error.message}\\n${error.stderr}`);
+        const stderr = error.stderr ? `
+${error.stderr}` : '';
+        throw new Error(`Ошибка компиляции: ${error.message}${stderr}`);
     }
 }
 
