@@ -627,7 +627,10 @@ mqttClient.loop();
             const result = await response.json().catch(() => null);
             if (!response.ok) {
                 const serverError = result?.error || result?.details || response.statusText;
-                throw new Error(`Ошибка компиляции: ${serverError}`);
+                const message = String(serverError).startsWith('Ошибка компиляции:')
+                    ? String(serverError)
+                    : `Ошибка компиляции: ${serverError}`;
+                throw new Error(message);
             }
             
             if (result.success) {

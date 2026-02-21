@@ -50,9 +50,10 @@ app.post('/api/compile', async (req, res) => {
         });
     } catch (error) {
         console.error('Ошибка компиляции:', error);
+        const message = String(error.message || 'Неизвестная ошибка');
         res.status(500).json({ 
             success: false, 
-            error: error.message,
+            error: message,
             details: error.stderr || ''
         });
     }
