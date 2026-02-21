@@ -127,7 +127,7 @@ async function createPlatformIOProject(workspacePath, code, options) {
     // PlatformIO конфигурация
     const platformioConfig = `
 [env:esp32dev]
-platform = espressif32
+platform = espressif32@6.9.0
 board = esp32dev
 framework = arduino
 monitor_speed = 115200
@@ -141,7 +141,7 @@ lib_deps =
     milesburton/DallasTemperature@^3.11.0
     knolleary/PubSubClient@^2.8
     madhephaestus/ESP32Servo@^3.0.6
-    marcoschwartz/LiquidCrystal_I2C@^1.1.4
+    johnrickman/LiquidCrystal_I2C@^1.1.4
     adafruit/Adafruit GFX Library@^1.12.0
     adafruit/Adafruit SSD1306@^2.5.11
     ${options.libraries ? options.libraries.join('\n    ') : ''}
