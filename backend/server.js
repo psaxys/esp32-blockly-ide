@@ -137,6 +137,7 @@ build_flags =
     -Wno-unused-function
 lib_deps = 
     adafruit/DHT sensor library@^1.4.6
+    adafruit/Adafruit Unified Sensor@^1.1.15
     milesburton/DallasTemperature@^3.11.0
     knolleary/PubSubClient@^2.8
     madhephaestus/ESP32Servo@^3.0.6
