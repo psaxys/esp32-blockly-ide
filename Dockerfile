@@ -1,6 +1,7 @@
 FROM node:18-alpine
 
 WORKDIR /usr/src/app
+ENV PATH="/opt/pio/bin:/usr/local/bin:${PATH}"
 
 # Установка системных зависимостей
 RUN apk add --no-cache \
@@ -12,7 +13,13 @@ RUN apk add --no-cache \
     linux-headers \
     bash \
     curl \
-    git
+    git \
+    libstdc++
+
+# Устанавливаем PlatformIO в venv (PEP 668 compatible для Alpine)
+RUN python3 -m venv /opt/pio \
+    && /opt/pio/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/pio/bin/pip install --no-cache-dir platformio==6.1.11
 
 # Копирование файлов проекта
 COPY backend/package*.json ./backend/
