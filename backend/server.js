@@ -141,7 +141,7 @@ lib_deps =
     milesburton/DallasTemperature@^3.11.0
     knolleary/PubSubClient@^2.8
     madhephaestus/ESP32Servo@^3.0.6
-    johnrickman/LiquidCrystal_I2C@^1.1.4
+    https://github.com/johnrickman/LiquidCrystal_I2C.git
     adafruit/Adafruit GFX Library@^1.12.0
     adafruit/Adafruit SSD1306@^2.5.11
     ${options.libraries ? options.libraries.join('\n    ') : ''}
