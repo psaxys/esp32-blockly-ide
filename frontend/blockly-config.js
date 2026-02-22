@@ -668,6 +668,9 @@ function detectRequiredLibraries(code) {
             if (header === 'DHT.h') {
                 libs.add('adafruit/Adafruit Unified Sensor@^1.1.15');
             }
+            if (header === 'Adafruit_GFX.h' || header === 'Adafruit_SSD1306.h') {
+                libs.add('adafruit/Adafruit BusIO@^1.16.1');
+            }
         }
     });
 

@@ -132,6 +132,7 @@ async function createPlatformIOProject(workspacePath, code, options) {
         'knolleary/PubSubClient@^2.8',
         'madhephaestus/ESP32Servo@^3.0.6',
         'adafruit/Adafruit GFX Library@^1.12.0',
+        'adafruit/Adafruit BusIO@^1.16.1',
         'adafruit/Adafruit SSD1306@^2.5.11'
     ];
     const userLibraries = options.libraries || [];
