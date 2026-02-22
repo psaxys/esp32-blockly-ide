@@ -16,8 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. ОПРЕДЕЛЕНИЕ БЛОКОВ (JSON) - ПОЛНЫЙ СПИСОК
     Blockly.defineBlocksWithJsonArray([
-        { "type": "esp32_setup", "message0": "setup %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
-        { "type": "esp32_loop", "message0": "loop %1 делать %2", "args0": [{ "type": "input_dummy" }, { "type": "input_statement", "name": "DO" }], "colour": 15 },
+        { "type": "esp32_structure", "message0": "структура программы", "message1": "setup: %1", "args1": [{ "type": "input_statement", "name": "SETUP" }], "message2": "loop: %1", "args2": [{ "type": "input_statement", "name": "LOOP" }], "colour": 15 },
         { "type": "esp32_delay", "message0": "ждать %1 мс", "args0": [{ "type": "input_value", "name": "MS", "check": "Number" }], "previousStatement": null, "nextStatement": null, "colour": 65 },
         { "type": "esp32_millis", "message0": "время с старта (мс)", "output": "Number", "colour": 65 },
         { "type": "esp32_micros", "message0": "время с старта (мкс)", "output": "Number", "colour": 65 },
@@ -291,6 +290,16 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
 // 3. ГЕНЕРАТОРЫ ESP32 (ИЗ ВАШЕГО ИСХОДНИКА)
+    Blockly.Arduino.forBlock['esp32_structure'] = function(block, generator) {
+        const setupBranch = generator.statementToCode(block, 'SETUP');
+        if (setupBranch && setupBranch.trim()) {
+            Blockly.Arduino.setups_[`custom_setup_${block.id}`] = setupBranch.trimEnd();
+        }
+        const loopBranch = generator.statementToCode(block, 'LOOP');
+        return loopBranch || '';
+    };
+
+    // backward compatibility for already saved workspaces
     Blockly.Arduino.forBlock['esp32_setup'] = function(block, generator) {
         const branch = generator.statementToCode(block, 'DO');
         if (branch && branch.trim()) {
@@ -709,13 +718,13 @@ function generateFullCode() {
         const defs = Object.values(Blockly.Arduino.definitions_ || {}).join('\n');
         const setups = Object.values(Blockly.Arduino.setups_ || {}).join('\n  ');
 
-        const setupBlocks = window.workspace.getBlocksByType('esp32_setup', false);
-        const loopBlocks = window.workspace.getBlocksByType('esp32_loop', false);
-        if (setupBlocks.length > 1 || loopBlocks.length > 1) {
-            console.warn('Рекомендуется использовать только один блок setup и один блок loop.');
+        const structureBlocks = window.workspace.getBlocksByType('esp32_structure', false);
+        if (structureBlocks.length > 1) {
+            console.warn('Рекомендуется использовать только один блок структуры программы.');
         }
 
-        const loopTail = loopBlocks.length > 0 ? '' : '\n  delay(1);';
+        const hasExplicitLoop = structureBlocks.length > 0 || window.workspace.getBlocksByType('esp32_loop', false).length > 0;
+        const loopTail = hasExplicitLoop ? '' : '\n  delay(1);';
         const fullCode = `/* Сгенерировано ESP32 Blockly */\n#include <Arduino.h>\n${libs}\n\n${defs}\n\nvoid setup() {\n  ${setups}\n}\n\nvoid loop() {\n${code}${loopTail}\n}`;
         if (window.codeViewer) window.codeViewer.setCode(fullCode, 'cpp');
         return fullCode;
@@ -727,7 +736,7 @@ function getToolboxConfig() {
     return {
         'kind': 'categoryToolbox',
         'contents': [
-            { 'kind': 'category', 'name': 'Структура', 'colour': '15', 'contents': [{ 'kind': 'block', 'type': 'esp32_setup' }, { 'kind': 'block', 'type': 'esp32_loop' }] },
+            { 'kind': 'category', 'name': 'Структура', 'colour': '15', 'contents': [{ 'kind': 'block', 'type': 'esp32_structure' }] },
             { 'kind': 'category', 'name': 'Логика', 'colour': '210', 'contents': [{ 'kind': 'block', 'type': 'controls_if' }, { 'kind': 'block', 'type': 'logic_compare' }, { 'kind': 'block', 'type': 'logic_operation' }, { 'kind': 'block', 'type': 'logic_negate' }, { 'kind': 'block', 'type': 'logic_boolean' }] },
             { 'kind': 'category', 'name': 'Циклы', 'colour': '120', 'contents': [{ 'kind': 'block', 'type': 'controls_repeat_ext' }, { 'kind': 'block', 'type': 'controls_whileUntil' }, { 'kind': 'block', 'type': 'controls_for' }] },
             { 'kind': 'category', 'name': 'Математика', 'colour': '230', 'contents': [{ 'kind': 'block', 'type': 'math_number' }, { 'kind': 'block', 'type': 'math_arithmetic' }, { 'kind': 'block', 'type': 'math_single' }, { 'kind': 'block', 'type': 'math_random_int' }] },
