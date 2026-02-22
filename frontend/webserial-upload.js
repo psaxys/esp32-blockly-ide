@@ -15,8 +15,12 @@ class ESP32WebSerialUploader {
 
     async connect() {
         try {
+            if (!window.isSecureContext) {
+                throw new Error('WebSerial API доступен только в безопасном контексте (HTTPS или localhost). Откройте IDE по https:// или http://localhost.');
+            }
+
             if (!('serial' in navigator)) {
-                throw new Error('WebSerial API не поддерживается. Используйте Chrome/Edge 89+ или Opera 76+');
+                throw new Error('WebSerial API недоступен в этом браузере/профиле. Для Яндекс Браузера включите экспериментальные веб-платформы (chrome://flags -> #enable-experimental-web-platform-features) и проверьте разрешения сайта.');
             }
 
             // Запрашиваем порт
