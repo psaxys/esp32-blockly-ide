@@ -5,6 +5,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.workspace) return; 
 
     const blocklyDiv = document.getElementById('blocklyDiv');
+    // Совместимость с Blockly v12+: убираем deprecated warning getVariable/getVariableById
+    if (Blockly.Workspace && Blockly.Workspace.prototype && Blockly.Workspace.prototype.getVariableMap) {
+        Blockly.Workspace.prototype.getVariable = function(name, opt_type) {
+            return this.getVariableMap().getVariable(name, opt_type);
+        };
+        Blockly.Workspace.prototype.getVariableById = function(id) {
+            return this.getVariableMap().getVariableById(id);
+        };
+    }
+
     // Совместимость с Blockly v12+: убираем deprecated warning getAllVariables
     if (Blockly.Workspace && Blockly.Workspace.prototype && Blockly.Workspace.prototype.getVariableMap) {
         Blockly.Workspace.prototype.getAllVariables = function() {
