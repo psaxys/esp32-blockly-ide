@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Blockly Constructor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     
    <script src="https://unpkg.com/blockly@12.3.1/blockly.min.js"></script>
 <script src="https://unpkg.com/blockly@12.3.1/msg/ru.js"></script>
@@ -158,6 +159,10 @@
                 <button class="btn-control btn-success" onclick="uploadToESP32()">
                     <i class="fas fa-upload"></i>
                     <span>Прошить ESP32</span>
+                </button>
+                <button class="btn-control" onclick="clearWorkspaceStorage()">
+                    <i class="fas fa-broom"></i>
+                    <span>Очистить localStorage</span>
                 </button>
             </div>
             <div class="status-bar">
