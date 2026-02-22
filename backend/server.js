@@ -50,9 +50,10 @@ app.post('/api/compile', async (req, res) => {
         });
     } catch (error) {
         console.error('Ошибка компиляции:', error);
+        const message = String(error.message || 'Неизвестная ошибка');
         res.status(500).json({ 
             success: false, 
-            error: error.message,
+            error: message,
             details: error.stderr || ''
         });
     }
@@ -117,38 +118,28 @@ async function createPlatformIOProject(workspacePath, code, options) {
     await fs.mkdir(path.join(workspacePath, 'lib'), { recursive: true });
     
     // Основной файл
+    const sourceCode = buildSourceCode(workspacePath, code, options);
     await fs.writeFile(
         path.join(workspacePath, 'src', 'main.cpp'),
-        `// ESP32 Blockly Generated Code
-// Project ID: ${path.basename(workspacePath)}
-// Generated: ${new Date().toISOString()}
-
-#include <Arduino.h>
-
-${code}
-
-void setup() {
-    Serial.begin(115200);
-    delay(1000);
-    Serial.println("\\n\\n=== ESP32 Blockly Project ===");
-    Serial.println("Project: ${path.basename(workspacePath)}");
-    
-    setup_blocks();
-    
-    Serial.println("Setup completed!");
-    Serial.println("=====================\\n");
-}
-
-void loop() {
-    loop_blocks();
-    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
-}`
+        sourceCode
     );
     
     // PlatformIO конфигурация
+    const baseLibraries = [
+        'adafruit/DHT sensor library@^1.4.6',
+        'adafruit/Adafruit Unified Sensor@^1.1.15',
+        'milesburton/DallasTemperature@^3.11.0',
+        'knolleary/PubSubClient@^2.8',
+        'madhephaestus/ESP32Servo@^3.0.6',
+        'adafruit/Adafruit GFX Library@^1.12.0',
+        'adafruit/Adafruit BusIO@^1.16.1',
+        'adafruit/Adafruit SSD1306@^2.5.11'
+    ];
+    const userLibraries = options.libraries || [];
+    const selectedLibraries = Array.from(new Set([...baseLibraries, ...userLibraries]));
     const platformioConfig = `
 [env:esp32dev]
-platform = espressif32
+platform = espressif32@6.9.0
 board = esp32dev
 framework = arduino
 monitor_speed = 115200
@@ -157,10 +148,10 @@ build_flags =
     -Wno-unused-variable
     -Wno-unused-function
 lib_deps = 
-    ${options.libraries ? options.libraries.join('\n    ') : ''}
+    ${selectedLibraries.join('\n    ')}
 upload_port = /dev/ttyUSB0
 `;
-    
+
     await fs.writeFile(
         path.join(workspacePath, 'platformio.ini'),
         platformioConfig
@@ -177,9 +168,44 @@ upload_port = /dev/ttyUSB0
     }
 }
 
+
+function buildSourceCode(workspacePath, code, options) {
+    const hasSetupLoop = /void\s+setup\s*\(/.test(code) && /void\s+loop\s*\(/.test(code);
+    if (hasSetupLoop) {
+        return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+${code}
+`;
+    }
+
+    return `// ESP32 Blockly Generated Code
+// Project ID: ${path.basename(workspacePath)}
+// Generated: ${new Date().toISOString()}
+
+#include <Arduino.h>
+
+${code}
+
+void setup() {
+    Serial.begin(115200);
+}
+
+void loop() {
+    ${options.delay ? `delay(${options.delay});` : 'delay(10);'}
+}`;
+}
+
 async function compileProject(workspacePath) {
     try {
         console.log(`Запуск компиляции в ${workspacePath}`);
+
+        try {
+            await execPromise('command -v pio');
+        } catch (_) {
+            throw new Error('PlatformIO (pio) не найден в web-контейнере. Пересоберите контейнер после обновления Dockerfile: docker-compose build web && docker-compose up -d web');
+        }
         
         // Запускаем компиляцию через PlatformIO
         const { stdout, stderr } = await execPromise(
@@ -204,9 +230,13 @@ async function compileProject(workspacePath) {
     } catch (error) {
         // Пытаемся получить больше информации об ошибке
         const errorLog = path.join(workspacePath, 'compile-error.log');
-        await fs.writeFile(errorLog, `STDOUT: ${error.stdout}\\n\\nSTDERR: ${error.stderr}`);
+        await fs.writeFile(errorLog, `STDOUT: ${error.stdout || ''}
+
+STDERR: ${error.stderr || ''}`);
         
-        throw new Error(`Ошибка компиляции: ${error.message}\\n${error.stderr}`);
+        const stderr = error.stderr ? `
+${error.stderr}` : '';
+        throw new Error(`Ошибка компиляции: ${error.message}${stderr}`);
     }
 }
 
