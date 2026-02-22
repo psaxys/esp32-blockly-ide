@@ -639,7 +639,8 @@ mqttClient.loop();
                     code: code,
                     options: {
                         delay: Number(document.getElementById('loopDelay')?.value || 10),
-                        libraries: detectRequiredLibraries(code)
+                        libraries: detectRequiredLibraries(code),
+                        board: document.getElementById('esp32Board')?.value || 'esp32dev'
                     }
                 })
             });

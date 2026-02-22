@@ -121,6 +121,15 @@
                         </select>
                     </div>
                     <div class="setting-item">
+                        <label>Модуль ESP32:</label>
+                        <select id="esp32Board">
+                            <option value="esp32dev" selected>ESP32 Dev Module</option>
+                            <option value="wemos_d1_mini32">WEMOS D1 Mini ESP32</option>
+                            <option value="esp32doit-devkit-v1">DOIT ESP32 DEVKIT V1</option>
+                            <option value="nodemcu-32s">NodeMCU-32S</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
                         <label>Задержка в loop():</label>
                         <input type="number" id="loopDelay" value="10" min="0" max="1000">
                         <span>мс</span>
@@ -132,6 +141,9 @@
                 <div class="settings-section">
                     <h4><i class="fas fa-project-diagram"></i> Проекты</h4>
                     <div class="projects-list" id="projectsList"></div>
+                    <button class="btn-secondary" onclick="saveCurrentProject()">
+                        <i class="far fa-save"></i> Сохранить проект
+                    </button>
                     <button class="btn-secondary" onclick="loadExample()">
                         <i class="fas fa-file-code"></i> Загрузить пример
                     </button>

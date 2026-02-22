@@ -320,14 +320,26 @@ async function loadProjectFromServer(projectId) {
         const data = await response.json();
         
         if (data.success) {
-            // Загружаем код в редактор
-            window.codeViewer.setCode(data.project.code, 'cpp');
-            
-            // Показываем уведомление
+            // Загружаем блоки в workspace, если сохранено состояние
+            if (data.project.blocklyState && window.workspace) {
+                try {
+                    window.workspace.clear();
+                    Blockly.serialization.workspaces.load(data.project.blocklyState, window.workspace);
+                    localStorage.setItem('blockly_workspace', JSON.stringify(data.project.blocklyState));
+                    if (typeof generateCode === 'function') generateCode();
+                    document.querySelector('[data-tab="blocks"]').click();
+                } catch (e) {
+                    console.warn('Не удалось загрузить состояние блоков, показываю код.', e);
+                    window.codeViewer.setCode(data.project.code, 'cpp');
+                    document.querySelector('[data-tab="code"]').click();
+                }
+            } else {
+                // fallback: загружаем только код
+                window.codeViewer.setCode(data.project.code, 'cpp');
+                document.querySelector('[data-tab="code"]').click();
+            }
+
             window.codeViewer.showNotification(`Проект "${projectId.substring(0, 8)}" загружен`, 'success');
-            
-            // Переключаемся на вкладку кода
-            document.querySelector('[data-tab="code"]').click();
         }
     } catch (error) {
         console.error('Ошибка загрузки проекта:', error);
@@ -336,38 +348,89 @@ async function loadProjectFromServer(projectId) {
 
 // Загрузка примера
 function loadExample() {
-    const exampleCode = `// Пример: Мигающий светодиод
-#include <Arduino.h>
+    if (!window.workspace) return;
 
-// Определяем пин светодиода
-const int LED_PIN = 2;
+    const exampleXml = `
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="esp32_structure" x="30" y="30">
+    <statement name="SETUP">
+      <block type="esp32_pin_mode">
+        <field name="PIN">2</field>
+        <field name="MODE">OUTPUT</field>
+      </block>
+    </statement>
+    <statement name="LOOP">
+      <block type="esp32_digital_write">
+        <field name="PIN">2</field>
+        <field name="STATE">HIGH</field>
+        <next>
+          <block type="esp32_delay">
+            <value name="MS">
+              <block type="math_number">
+                <field name="NUM">1000</field>
+              </block>
+            </value>
+            <next>
+              <block type="esp32_digital_write">
+                <field name="PIN">2</field>
+                <field name="STATE">LOW</field>
+                <next>
+                  <block type="esp32_delay">
+                    <value name="MS">
+                      <block type="math_number">
+                        <field name="NUM">1000</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>`;
 
-// Функция настройки блоков
-void setup_blocks() {
-    // Настраиваем пин как выход
-    pinMode(LED_PIN, OUTPUT);
-    
-    // Выводим приветственное сообщение
-    Serial.println("Blink example started!");
-    Serial.println("LED pin: " + String(LED_PIN));
+    const xmlDom = Blockly.utils.xml.textToDom(exampleXml);
+    window.workspace.clear();
+    Blockly.Xml.domToWorkspace(xmlDom, window.workspace);
+
+    if (typeof generateCode === 'function') generateCode();
+    window.codeViewer.showNotification('Пример "Мигающий светодиод" загружен в блоки', 'success');
+    document.querySelector('[data-tab="blocks"]').click();
 }
 
-// Функция выполнения блоков
-void loop_blocks() {
-    // Включаем светодиод
-    digitalWrite(LED_PIN, HIGH);
-    Serial.println("LED ON");
-    delay(1000);
-    
-    // Выключаем светодиод
-    digitalWrite(LED_PIN, LOW);
-    Serial.println("LED OFF");
-    delay(1000);
-}`;
-    
-    window.codeViewer.setCode(exampleCode, 'cpp');
-    window.codeViewer.showNotification('Пример "Мигающий светодиод" загружен', 'success');
-    document.querySelector('[data-tab="code"]').click();
+async function saveCurrentProject() {
+    try {
+        if (!window.workspace) return;
+        const code = typeof generateCode === 'function' ? generateCode() : window.codeViewer.getCode();
+        const blocklyState = Blockly.serialization.workspaces.save(window.workspace);
+        const name = prompt('Название проекта:', 'Мой проект') || 'Мой проект';
+
+        const response = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                code,
+                blocklyState,
+                options: {
+                    board: document.getElementById('esp32Board')?.value || 'esp32dev'
+                }
+            })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Ошибка сохранения проекта');
+        }
+
+        window.codeViewer.showNotification('Проект сохранен', 'success');
+        if (typeof loadProjects === 'function') loadProjects();
+    } catch (error) {
+        console.error('Ошибка сохранения проекта:', error);
+        updateStatus(`Ошибка сохранения: ${error.message}`, 'error');
+    }
 }
 
 // Обновление статуса

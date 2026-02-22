@@ -62,6 +62,35 @@ app.post('/api/compile', async (req, res) => {
     }
 });
 
+
+// API для сохранения проекта без компиляции
+app.post('/api/project', async (req, res) => {
+    try {
+        const { code, blocklyState, name, projectId, options = {} } = req.body;
+        const id = projectId || uuidv4();
+        const workspacePath = path.join(__dirname, '../workspaces', id);
+
+        await fs.mkdir(path.join(workspacePath, 'src'), { recursive: true });
+        await fs.writeFile(path.join(workspacePath, 'src', 'main.cpp'), code || '// empty');
+
+        if (blocklyState) {
+            await fs.writeFile(path.join(workspacePath, 'blockly-state.json'), JSON.stringify(blocklyState, null, 2));
+        }
+
+        const info = {
+            name: name || `Проект ${id.substring(0, 8)}`,
+            savedAt: new Date().toISOString(),
+            size: (code || '').length,
+            options
+        };
+        await saveProjectInfo(workspacePath, info);
+
+        res.json({ success: true, projectId: id, message: 'Проект сохранен' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // API для получения информации о проекте
 app.get('/api/project/:id', async (req, res) => {
     try {
@@ -70,13 +99,18 @@ app.get('/api/project/:id', async (req, res) => {
         
         const info = JSON.parse(await fs.readFile(infoPath, 'utf8'));
         const code = await fs.readFile(path.join(projectPath, 'src', 'main.cpp'), 'utf8');
+        let blocklyState = null;
+        try {
+            blocklyState = JSON.parse(await fs.readFile(path.join(projectPath, 'blockly-state.json'), 'utf8'));
+        } catch (e) {}
         
         res.json({
             success: true,
             project: {
                 id: req.params.id,
                 code,
-                info
+                info,
+                blocklyState
             }
         });
     } catch (error) {
@@ -98,8 +132,8 @@ app.get('/api/projects', async (req, res) => {
                     const info = JSON.parse(await fs.readFile(infoPath, 'utf8'));
                     projects.push({
                         id: item.name,
-                        name: `Проект ${item.name.substring(0, 8)}`,
-                        compiledAt: info.compiledAt,
+                        name: info.name || `Проект ${item.name.substring(0, 8)}` ,
+                        compiledAt: info.compiledAt || info.savedAt,
                         size: info.size
                     });
                 } catch (e) {
@@ -135,7 +169,7 @@ async function createPlatformIOProject(workspacePath, code, options) {
     const platformioConfig = `
 [env:esp32dev]
 platform = espressif32@6.9.0
-board = esp32dev
+board = ${options.board || "esp32dev"}
 framework = arduino
 monitor_speed = 115200
 upload_speed = 921600
