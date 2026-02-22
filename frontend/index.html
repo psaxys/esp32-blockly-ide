@@ -188,6 +188,27 @@
                         <button class="btn" onclick="detectESP32()">Найти устройство</button>
                     </div>
                 </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Загрузка прошивки</h4>
+                        <div class="status-progress" style="margin: 8px 0;">
+                            <div class="progress-bar" id="uploadProgress"></div>
+                        </div>
+                        <p id="uploadPercent">0%</p>
+                        <p id="uploadStatus">Ожидание загрузки...</p>
+                    </div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Готово</h4>
+                        <p id="completionMessage">Прошивка завершена.</p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="btn-secondary" onclick="closeModal()">Закрыть</button>
             </div>
         </div>
     </div>
