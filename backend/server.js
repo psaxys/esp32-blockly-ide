@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const https = require('https');
+const fsSync = require('fs');
 const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
@@ -10,6 +12,7 @@ const execPromise = util.promisify(exec);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const HTTPS_PORT = process.env.HTTPS_PORT || 8443;
 
 // Middleware
 app.use(cors());
@@ -239,6 +242,23 @@ async function saveProjectInfo(workspacePath, info) {
 }
 
 app.listen(PORT, () => {
-    console.log(`🚀 ESP32 Blockly Constructor запущен на порту ${PORT}`);
+    console.log(`🚀 ESP32 Blockly Constructor (HTTP) запущен на порту ${PORT}`);
     console.log(`📁 Рабочие директории: ${path.join(__dirname, '../workspaces')}`);
 });
+
+if (process.env.USE_HTTPS === 'true') {
+    try {
+        const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '../certs/server.crt');
+        const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '../certs/server.key');
+        const options = {
+            key: fsSync.readFileSync(keyPath),
+            cert: fsSync.readFileSync(certPath)
+        };
+
+        https.createServer(options, app).listen(HTTPS_PORT, () => {
+            console.log(`🔒 HTTPS запущен на порту ${HTTPS_PORT}`);
+        });
+    } catch (error) {
+        console.error('Не удалось запустить HTTPS:', error.message);
+    }
+}
