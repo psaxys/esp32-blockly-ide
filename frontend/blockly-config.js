@@ -677,6 +677,18 @@ function detectRequiredLibraries(code) {
     return Array.from(libs);
 }
 
+
+function clearWorkspaceStorage() {
+    if (!confirm('Очистить сохраненный проект и рабочее поле?')) return;
+
+    localStorage.removeItem('blockly_workspace');
+    if (window.workspace) {
+        window.workspace.clear();
+        generateFullCode();
+    }
+    alert('Локальное хранилище проекта очищено.');
+}
+
 function saveState() {
     const state = Blockly.serialization.workspaces.save(window.workspace);
     localStorage.setItem('blockly_workspace', JSON.stringify(state));

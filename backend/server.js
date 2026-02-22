@@ -125,18 +125,10 @@ async function createPlatformIOProject(workspacePath, code, options) {
     );
     
     // PlatformIO конфигурация
-    const baseLibraries = [
-        'adafruit/DHT sensor library@^1.4.6',
-        'adafruit/Adafruit Unified Sensor@^1.1.15',
-        'milesburton/DallasTemperature@^3.11.0',
-        'knolleary/PubSubClient@^2.8',
-        'madhephaestus/ESP32Servo@^3.0.6',
-        'adafruit/Adafruit GFX Library@^1.12.0',
-        'adafruit/Adafruit BusIO@^1.16.1',
-        'adafruit/Adafruit SSD1306@^2.5.11'
-    ];
-    const userLibraries = options.libraries || [];
-    const selectedLibraries = Array.from(new Set([...baseLibraries, ...userLibraries]));
+    const selectedLibraries = Array.from(new Set(options.libraries || []));
+    const libsSection = selectedLibraries.length
+        ? `lib_deps =\n    ${selectedLibraries.join('\n    ')}`
+        : 'lib_deps =';
     const platformioConfig = `
 [env:esp32dev]
 platform = espressif32@6.9.0
@@ -147,8 +139,7 @@ upload_speed = 921600
 build_flags = 
     -Wno-unused-variable
     -Wno-unused-function
-lib_deps = 
-    ${selectedLibraries.join('\n    ')}
+${libsSection}
 upload_port = /dev/ttyUSB0
 `;
 
