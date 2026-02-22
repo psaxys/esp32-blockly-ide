@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Blockly Constructor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     
    <script src="https://unpkg.com/blockly@12.3.1/blockly.min.js"></script>
 <script src="https://unpkg.com/blockly@12.3.1/msg/ru.js"></script>
@@ -120,6 +121,15 @@
                         </select>
                     </div>
                     <div class="setting-item">
+                        <label>Модуль ESP32:</label>
+                        <select id="esp32Board">
+                            <option value="esp32dev" selected>ESP32 Dev Module</option>
+                            <option value="wemos_d1_mini32">WEMOS D1 Mini ESP32</option>
+                            <option value="esp32doit-devkit-v1">DOIT ESP32 DEVKIT V1</option>
+                            <option value="nodemcu-32s">NodeMCU-32S</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
                         <label>Задержка в loop():</label>
                         <input type="number" id="loopDelay" value="10" min="0" max="1000">
                         <span>мс</span>
@@ -131,6 +141,9 @@
                 <div class="settings-section">
                     <h4><i class="fas fa-project-diagram"></i> Проекты</h4>
                     <div class="projects-list" id="projectsList"></div>
+                    <button class="btn-secondary" onclick="saveCurrentProject()">
+                        <i class="far fa-save"></i> Сохранить проект
+                    </button>
                     <button class="btn-secondary" onclick="loadExample()">
                         <i class="fas fa-file-code"></i> Загрузить пример
                     </button>
@@ -159,6 +172,10 @@
                     <i class="fas fa-upload"></i>
                     <span>Прошить ESP32</span>
                 </button>
+                <button class="btn-control" onclick="clearWorkspaceStorage()">
+                    <i class="fas fa-broom"></i>
+                    <span>Очистить localStorage</span>
+                </button>
             </div>
             <div class="status-bar">
                 <div class="status-message" id="statusMessage">
@@ -183,6 +200,27 @@
                         <button class="btn" onclick="detectESP32()">Найти устройство</button>
                     </div>
                 </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Загрузка прошивки</h4>
+                        <div class="status-progress" style="margin: 8px 0;">
+                            <div class="progress-bar" id="uploadProgress"></div>
+                        </div>
+                        <p id="uploadPercent">0%</p>
+                        <p id="uploadStatus">Ожидание загрузки...</p>
+                    </div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Готово</h4>
+                        <p id="completionMessage">Прошивка завершена.</p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 12px; text-align: right;">
+                <button class="btn-secondary" onclick="closeModal()">Закрыть</button>
             </div>
         </div>
     </div>

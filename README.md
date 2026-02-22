@@ -43,6 +43,7 @@ docker-compose up -d
 4. Откройте в браузере:
 ```bash
 http://localhost:8080
+https://localhost:8443
 ```
 ### 🐳 Docker команды
 ```bash
