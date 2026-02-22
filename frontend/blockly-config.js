@@ -644,6 +644,10 @@ mqttClient.loop();
             }
             
             if (result.success) {
+                if (result.binary) {
+                    window.compiledBinary = result.binary;
+                }
+                window.lastCompiledProjectId = result.projectId || null;
                 console.log('Компиляция успешна:', result.message);
                 alert(result.message);
             } else {
