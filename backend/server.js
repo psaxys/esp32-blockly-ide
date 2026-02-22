@@ -125,6 +125,17 @@ async function createPlatformIOProject(workspacePath, code, options) {
     );
     
     // PlatformIO конфигурация
+    const baseLibraries = [
+        'adafruit/DHT sensor library@^1.4.6',
+        'adafruit/Adafruit Unified Sensor@^1.1.15',
+        'milesburton/DallasTemperature@^3.11.0',
+        'knolleary/PubSubClient@^2.8',
+        'madhephaestus/ESP32Servo@^3.0.6',
+        'adafruit/Adafruit GFX Library@^1.12.0',
+        'adafruit/Adafruit SSD1306@^2.5.11'
+    ];
+    const userLibraries = options.libraries || [];
+    const selectedLibraries = Array.from(new Set([...baseLibraries, ...userLibraries]));
     const platformioConfig = `
 [env:esp32dev]
 platform = espressif32@6.9.0
@@ -136,18 +147,10 @@ build_flags =
     -Wno-unused-variable
     -Wno-unused-function
 lib_deps = 
-    adafruit/DHT sensor library@^1.4.6
-    adafruit/Adafruit Unified Sensor@^1.1.15
-    milesburton/DallasTemperature@^3.11.0
-    knolleary/PubSubClient@^2.8
-    madhephaestus/ESP32Servo@^3.0.6
-    https://github.com/johnrickman/LiquidCrystal_I2C.git
-    adafruit/Adafruit GFX Library@^1.12.0
-    adafruit/Adafruit SSD1306@^2.5.11
-    ${options.libraries ? options.libraries.join('\n    ') : ''}
+    ${selectedLibraries.join('\n    ')}
 upload_port = /dev/ttyUSB0
 `;
-    
+
     await fs.writeFile(
         path.join(workspacePath, 'platformio.ini'),
         platformioConfig

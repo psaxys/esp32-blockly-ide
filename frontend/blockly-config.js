@@ -619,7 +619,8 @@ mqttClient.loop();
                 body: JSON.stringify({
                     code: code,
                     options: {
-                        delay: Number(document.getElementById('loopDelay')?.value || 10)
+                        delay: Number(document.getElementById('loopDelay')?.value || 10),
+                        libraries: detectRequiredLibraries(code)
                     }
                 })
             });
@@ -646,6 +647,32 @@ mqttClient.loop();
         }
     };
 });
+
+
+function detectRequiredLibraries(code) {
+    const libraryByHeader = {
+        'DHT.h': 'adafruit/DHT sensor library@^1.4.6',
+        'DallasTemperature.h': 'milesburton/DallasTemperature@^3.11.0',
+        'OneWire.h': 'milesburton/DallasTemperature@^3.11.0',
+        'PubSubClient.h': 'knolleary/PubSubClient@^2.8',
+        'ESP32Servo.h': 'madhephaestus/ESP32Servo@^3.0.6',
+        'LiquidCrystal_I2C.h': 'https://github.com/enjoyneering/LiquidCrystal_I2C.git',
+        'Adafruit_GFX.h': 'adafruit/Adafruit GFX Library@^1.12.0',
+        'Adafruit_SSD1306.h': 'adafruit/Adafruit SSD1306@^2.5.11'
+    };
+
+    const libs = new Set();
+    Object.entries(libraryByHeader).forEach(([header, lib]) => {
+        if (code.includes(`#include <${header}>`)) {
+            libs.add(lib);
+            if (header === 'DHT.h') {
+                libs.add('adafruit/Adafruit Unified Sensor@^1.1.15');
+            }
+        }
+    });
+
+    return Array.from(libs);
+}
 
 function saveState() {
     const state = Blockly.serialization.workspaces.save(window.workspace);
