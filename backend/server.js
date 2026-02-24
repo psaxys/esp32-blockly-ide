@@ -118,6 +118,18 @@ app.get('/api/project/:id', async (req, res) => {
     }
 });
 
+
+// API для удаления проекта
+app.delete('/api/project/:id', async (req, res) => {
+    try {
+        const projectPath = path.join(__dirname, '../workspaces', req.params.id);
+        await fs.rm(projectPath, { recursive: true, force: true });
+        res.json({ success: true, message: 'Проект удален' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // API для списка проектов
 app.get('/api/projects', async (req, res) => {
     try {

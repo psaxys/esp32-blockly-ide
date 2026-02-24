@@ -522,6 +522,38 @@ body {
     margin-right: 5px;
 }
 
+.project-main {
+    cursor: pointer;
+}
+
+.project-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.project-action-btn {
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.project-action-btn.danger {
+    background: #fff5f5;
+    color: var(--danger-color);
+}
+
+.project-action-btn.danger:hover {
+    background: #fed7d7;
+}
+
+
 .info-box {
     background: white;
     padding: 15px;
