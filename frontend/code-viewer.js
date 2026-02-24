@@ -298,11 +298,18 @@ async function loadProjects() {
         const projectsList = document.getElementById('projectsList');
         if (data.success && data.projects.length > 0) {
             projectsList.innerHTML = data.projects.map(project => `
-                <div class="project-item" onclick="loadProjectFromServer('${project.id}')">
-                    <div class="project-name">${project.name}</div>
-                    <div class="project-info">
-                        <span><i class="far fa-calendar"></i> ${new Date(project.compiledAt).toLocaleDateString()}</span>
-                        <span><i class="fas fa-weight-hanging"></i> ${Math.round(project.size / 1024)}KB</span>
+                <div class="project-item">
+                    <div class="project-main" onclick="loadProjectFromServer('${project.id}')">
+                        <div class="project-name">${project.name}</div>
+                        <div class="project-info">
+                            <span><i class="far fa-calendar"></i> ${new Date(project.compiledAt).toLocaleDateString()}</span>
+                            <span><i class="fas fa-weight-hanging"></i> ${Math.round((project.size || 0) / 1024)}KB</span>
+                        </div>
+                    </div>
+                    <div class="project-actions">
+                        <button class="project-action-btn danger" title="Удалить проект" onclick="deleteProject('${project.id}', '${(project.name || '').replace(/'/g, '&apos;')}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -311,6 +318,26 @@ async function loadProjects() {
         }
     } catch (error) {
         console.error('Ошибка загрузки проектов:', error);
+    }
+}
+
+async function deleteProject(projectId, projectName) {
+    try {
+        const safeName = (projectName || projectId).replace(/&apos;/g, "'");
+        if (!confirm(`Удалить проект "${safeName}"?`)) return;
+
+        const response = await fetch(`/api/project/${projectId}`, { method: 'DELETE' });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Не удалось удалить проект');
+        }
+
+        window.codeViewer.showNotification('Проект удален', 'success');
+        loadProjects();
+    } catch (error) {
+        console.error('Ошибка удаления проекта:', error);
+        window.codeViewer.showNotification(`Ошибка удаления: ${error.message}`, 'error');
     }
 }
 
@@ -430,6 +457,114 @@ async function saveCurrentProject() {
     } catch (error) {
         console.error('Ошибка сохранения проекта:', error);
         updateStatus(`Ошибка сохранения: ${error.message}`, 'error');
+    }
+}
+
+function exportCurrentProject() {
+    try {
+        if (!window.workspace) return;
+
+        const code = typeof generateCode === 'function' ? generateCode() : window.codeViewer.getCode();
+        const blocklyState = Blockly.serialization.workspaces.save(window.workspace);
+        const projectData = {
+            format: 'esp32-blockly-project-v1',
+            exportedAt: new Date().toISOString(),
+            name: 'Локальный проект',
+            options: {
+                board: document.getElementById('esp32Board')?.value || 'esp32dev',
+                delay: Number(document.getElementById('loopDelay')?.value || 10)
+            },
+            code,
+            blocklyState
+        };
+
+        const fileName = `esp32_project_${Date.now()}.json`;
+        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        window.codeViewer.showNotification(`Проект сохранен в файл ${fileName}`, 'success');
+    } catch (error) {
+        console.error('Ошибка локального экспорта проекта:', error);
+        window.codeViewer.showNotification(`Ошибка экспорта: ${error.message}`, 'error');
+    }
+}
+
+function openImportProjectDialog() {
+    const input = document.getElementById('projectFileInput');
+    if (!input) return;
+    input.value = '';
+    input.click();
+}
+
+async function importProjectFromFile(event) {
+    try {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const project = JSON.parse(text);
+
+        if (!project || !project.code) {
+            throw new Error('Некорректный файл проекта');
+        }
+
+        if (window.workspace && project.blocklyState) {
+            window.workspace.clear();
+            Blockly.serialization.workspaces.load(project.blocklyState, window.workspace);
+            localStorage.setItem('blockly_workspace', JSON.stringify(project.blocklyState));
+            if (typeof generateCode === 'function') generateCode();
+            document.querySelector('[data-tab="blocks"]')?.click();
+        } else {
+            window.codeViewer.setCode(project.code, 'cpp');
+            document.querySelector('[data-tab="code"]')?.click();
+        }
+
+        if (project.options?.board) {
+            const boardSelect = document.getElementById('esp32Board');
+            if (boardSelect) boardSelect.value = project.options.board;
+        }
+        if (typeof project.options?.delay !== 'undefined') {
+            const delayInput = document.getElementById('loopDelay');
+            if (delayInput) delayInput.value = String(project.options.delay);
+        }
+
+        window.codeViewer.showNotification('Проект загружен с компьютера', 'success');
+    } catch (error) {
+        console.error('Ошибка импорта проекта:', error);
+        window.codeViewer.showNotification(`Ошибка загрузки файла: ${error.message}`, 'error');
+    }
+}
+
+function downloadCompiledFirmware() {
+    try {
+        if (!window.compiledBinary) {
+            window.codeViewer.showNotification('Сначала выполните компиляцию', 'warning');
+            return;
+        }
+
+        const binary = atob(window.compiledBinary);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const projectId = window.lastCompiledProjectId || 'esp32';
+        a.href = url;
+        a.download = `firmware_${projectId}.bin`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        window.codeViewer.showNotification('Прошивка сохранена на компьютер', 'success');
+    } catch (error) {
+        console.error('Ошибка сохранения прошивки:', error);
+        window.codeViewer.showNotification(`Ошибка сохранения прошивки: ${error.message}`, 'error');
     }
 }
 

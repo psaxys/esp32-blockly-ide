@@ -144,9 +144,16 @@
                     <button class="btn-secondary" onclick="saveCurrentProject()">
                         <i class="far fa-save"></i> Сохранить проект
                     </button>
+                    <button class="btn-secondary" onclick="exportCurrentProject()">
+                        <i class="fas fa-file-export"></i> Сохранить на компьютер
+                    </button>
+                    <button class="btn-secondary" onclick="openImportProjectDialog()">
+                        <i class="fas fa-file-import"></i> Загрузить с компьютера
+                    </button>
                     <button class="btn-secondary" onclick="loadExample()">
                         <i class="fas fa-file-code"></i> Загрузить пример
                     </button>
+                    <input type="file" id="projectFileInput" accept=".json" style="display: none;" onchange="importProjectFromFile(event)">
                 </div>
                 <div class="settings-section">
                     <h4><i class="fas fa-info-circle"></i> Информация</h4>
@@ -171,6 +178,10 @@
                 <button class="btn-control btn-success" onclick="uploadToESP32()">
                     <i class="fas fa-upload"></i>
                     <span>Прошить ESP32</span>
+                </button>
+                <button class="btn-control" onclick="downloadCompiledFirmware()">
+                    <i class="fas fa-download"></i>
+                    <span>Скачать прошивку</span>
                 </button>
                 <button class="btn-control" onclick="clearWorkspaceStorage()">
                     <i class="fas fa-broom"></i>
