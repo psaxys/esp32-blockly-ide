@@ -53,7 +53,8 @@
                 
                 <div class="tab-content" id="code-tab">
                     <div class="code-header">
-                        <select id="codeViewSelect">
+                        <label for="codeViewSelect" class="visually-hidden">Формат кода</label>
+                        <select id="codeViewSelect" name="codeViewSelect">
                             <option value="cpp">C++</option>
                             <option value="python">MicroPython</option>
                             <option value="json">JSON</option>
@@ -83,7 +84,8 @@
                         <button class="btn" onclick="connectSerial()">
                             <i class="fas fa-plug"></i> Подключить
                         </button>
-                        <select id="baudRate">
+                        <label for="baudRate" class="visually-hidden">Скорость порта</label>
+                        <select id="baudRate" name="baudRate">
                             <option value="9600">9600</option>
                             <option value="115200" selected>115200</option>
                             <option value="921600">921600</option>
@@ -99,7 +101,8 @@
                         </div>
                     </div>
                     <div class="serial-input">
-                        <input type="text" id="serialInput" placeholder="Введите команду...">
+                        <label for="serialInput" class="visually-hidden">Команда для отправки в Serial</label>
+                        <input type="text" id="serialInput" name="serialInput" placeholder="Введите команду...">
                         <button onclick="sendSerial()">Отправить</button>
                     </div>
                 </div>
@@ -113,16 +116,16 @@
                 <div class="settings-section">
                     <h4><i class="fas fa-cog"></i> Параметры компиляции</h4>
                     <div class="setting-item">
-                        <label>Оптимизация:</label>
-                        <select id="optimization">
+                        <label for="optimization">Оптимизация:</label>
+                        <select id="optimization" name="optimization">
                             <option value="debug">Debug</option>
                             <option value="size">Минимальный размер</option>
                             <option value="speed">Максимальная скорость</option>
                         </select>
                     </div>
                     <div class="setting-item">
-                        <label>Модуль ESP32:</label>
-                        <select id="esp32Board">
+                        <label for="esp32Board">Модуль ESP32:</label>
+                        <select id="esp32Board" name="esp32Board">
                             <option value="esp32dev" selected>ESP32 Dev Module</option>
                             <option value="wemos_d1_mini32">WEMOS D1 Mini ESP32</option>
                             <option value="esp32doit-devkit-v1">DOIT ESP32 DEVKIT V1</option>
@@ -130,12 +133,13 @@
                         </select>
                     </div>
                     <div class="setting-item">
-                        <label>Задержка в loop():</label>
-                        <input type="number" id="loopDelay" value="10" min="0" max="1000">
+                        <label for="loopDelay">Задержка в loop():</label>
+                        <input type="number" id="loopDelay" name="loopDelay" value="10" min="0" max="1000">
                         <span>мс</span>
                     </div>
                     <div class="setting-item">
-                        <label><input type="checkbox" id="enableWifi"> Включить WiFi</label>
+                        <input type="checkbox" id="enableWifi" name="enableWifi">
+                        <label for="enableWifi">Включить WiFi</label>
                     </div>
                 </div>
                 <div class="settings-section">
@@ -153,7 +157,7 @@
                     <button class="btn-secondary" onclick="loadExample()">
                         <i class="fas fa-file-code"></i> Загрузить пример
                     </button>
-                    <input type="file" id="projectFileInput" accept=".json" style="display: none;" onchange="importProjectFromFile(event)">
+                    <input type="file" id="projectFileInput" name="projectFileInput" accept=".json" style="display: none;" onchange="importProjectFromFile(event)">
                 </div>
                 <div class="settings-section">
                     <h4><i class="fas fa-info-circle"></i> Информация</h4>
