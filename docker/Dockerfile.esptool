@@ -27,6 +27,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
     bitstring==4.1.4
 
 # Создание рабочей директории
-WORKDIR /workspaces
+#WORKDIR /workspaces
 
 CMD ["tail", "-f", "/dev/null"]
