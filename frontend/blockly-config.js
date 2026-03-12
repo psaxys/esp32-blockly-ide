@@ -608,7 +608,7 @@ mqttClient.loop();
     // 4. ЗАПУСК И ГЛОБАЛЬНЫЕ ФУНКЦИИ (ДЛЯ КНОПОК HTML)
     window.workspace = Blockly.inject(blocklyDiv, {
         toolbox: getToolboxConfig(),
-        media: 'https://unpkg.com/blockly/media/',
+        media: 'https://unpkg.com/blockly@12.3.1/media/',
         grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
         trashcan: true
     });
