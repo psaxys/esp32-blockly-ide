@@ -41,6 +41,6 @@ RUN pio lib -g install \
 ENV PLATFORMIO_CORE_DIR=/root/.platformio
 ENV PATH="/root/.platformio/penv/bin:$PATH"
 
-WORKDIR /workspaces
+#WORKDIR /workspaces
 
 CMD ["tail", "-f", "/dev/null"]
